@@ -16,6 +16,12 @@
 
 ![示例图](https://opengraph.githubassets.com/xiaotian/xiaotian2333/yunzai-plugins-Single-file)
 
+### 唱鸭
+
+随机返回一段唱鸭的音频片段
+
+> 需安装 ffmpeg 否则无法生效
+
 ## 开源协议
 
 还没想好用什么开源协议，暂时不添加
