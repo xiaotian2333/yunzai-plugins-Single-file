@@ -1,3 +1,6 @@
+// 插件作者 xiaotian2333
+// 开源地址 https://github.com/xiaotian2333/yunzai-plugins
+
 import plugin from '../../lib/plugins/plugin.js'
 import fetch from "node-fetch"
 
@@ -16,6 +19,14 @@ export class qndxx extends plugin {
                 {
                     reg: '清凉图',
                     fnc: 'ql'
+                },
+                {
+                    reg: '二元图',
+                    fnc: 'yuan2'
+                },
+                {
+                    reg: '三元图',
+                    fnc: 'yuan3'
                 }
             ]
         })
@@ -29,6 +40,24 @@ export class qndxx extends plugin {
         let msg = e.msg
         msg = msg.replace(/清凉图/g)
         if (!msg) return
+        e.reply(segment.image('https://imgapi.cn/cos.php'))
+        return true
+    }
+
+    async yuan2(e) {
+        if (!group)
+            if (e.isPrivate && !e.isMaster) {
+                return true
+            }
+        e.reply(segment.image('http://api.liangx.link/API/AGG.php'))
+        return true
+    }
+
+    async yuan3(e) {
+        if (!group)
+            if (e.isPrivate && !e.isMaster) {
+                return true
+            }
         e.reply(segment.image('https://api.r10086.com/樱道随机图片api接口.php?图片系列=少女写真1'))
         return true
     }
