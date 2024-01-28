@@ -1,5 +1,5 @@
 // 插件作者 xiaotian2333
-// 开源地址 https://github.com/xiaotian2333/yunzai-plugins
+// 开源地址 https://github.com/xiaotian2333/yunzai-plugins-Single-file
 
 import plugin from '../../lib/plugins/plugin.js'
 import fetch from "node-fetch"
