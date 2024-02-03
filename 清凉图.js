@@ -4,11 +4,10 @@
 import plugin from '../../lib/plugins/plugin.js'
 import fetch from "node-fetch"
 
-const _path = process.cwd()
 //是否允许私聊使用，设为false则禁止私聊使用（主人除外）
 let group = true
 
-export class qndxx extends plugin {
+export class ql extends plugin {
     constructor() {
         super({
             name: '清凉图',
