@@ -36,6 +36,7 @@ export class example extends plugin {
     let msg = e.msg
     // 删除不需要的部分
     msg = msg.replace('播放', '');
+    msg = msg.replace(/ /g, "");
     // 如果 msg 为空，则返回
     if (!msg) return
     // 输出日志
