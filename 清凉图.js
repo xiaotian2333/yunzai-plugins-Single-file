@@ -27,6 +27,10 @@ export class qndxx extends plugin {
                 {
                     reg: '三元图',
                     fnc: 'yuan3'
+                },
+                {
+                    reg: 'r16',
+                    fnc: 'r16'
                 }
             ]
         })
@@ -59,6 +63,15 @@ export class qndxx extends plugin {
                 return true
             }
         e.reply(segment.image('https://api.r10086.com/樱道随机图片api接口.php?图片系列=少女写真1'))
+        return true
+    }
+
+    async r16(e) {
+        if (!group)
+            if (e.isPrivate && !e.isMaster) {
+                return true
+            }
+        e.reply(segment.image('https://api.r10086.com/樱道随机图片api接口.php?图片系列=萝莉'))
         return true
     }
 }
