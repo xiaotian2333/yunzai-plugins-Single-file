@@ -15,7 +15,7 @@ export class example extends plugin {
 			event: 'message',
 			priority: 5000,
 			rule: [{
-					reg: '^#?唱[呀鸭吖丫].*$',
+					reg: '^#?唱[呀鸭吖丫]$',
 					fnc: 'changya'
 				}
 			]
