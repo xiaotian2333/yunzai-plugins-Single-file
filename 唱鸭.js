@@ -38,7 +38,7 @@ export class example extends plugin {
 				logger.debug('[唱鸭]获取到歌词：',data.data.lyrics)
 				// 处理歌词换行
 				let lyrics = data.data.lyrics.replace(/ /g, "\n");
-				lyrics = "歌手：" + data.data.nickname + "\n" + lyrics;
+				lyrics = "歌手：" + data.data.nickname + "\n" + lyrics + "\n---\n歌曲链接\n" + data.data.audioSrc;
 				e.reply(lyrics)
 			})
 			.catch(error => {
