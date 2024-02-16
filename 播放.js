@@ -42,7 +42,8 @@ export class example extends plugin {
     // 输出日志
     logger.mark('[播放]处理完毕，链接：', msg)
     // 使用 reply 方法回复消息
-    e.reply(segment.record(msg))
+    // e.reply(segment.record(msg)) //普通语音
+    e.reply(await uploadRecord(msg,0,false)) //高清语音,参数说明 ：1.音频链接 2.音频时长 欺骗，0=关闭 3.压缩音质
     // 返回 true 拦截消息继续往下
     return true
 }

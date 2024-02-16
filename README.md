@@ -20,12 +20,7 @@
 
 随机返回一段唱鸭的音频片段
 
-TODO
-
-- [X] 顺带发送歌词
-- [ ] 发送卡片形式
-
-> 需安装 ffmpeg 否则无法生效
+> 需安装 ffmpeg 否则无法生效，默认开启高清语音，需安装枫叶，土块等包含高清语音的插件或独立的[高清语音模块](https://github.com/xiaotian2333/YunzaiBOT-HD-Voice-module)
 
 ### 青年大学习
 
@@ -54,7 +49,7 @@ TODO
 
 发送播放后跟上音频的链接即可
 
-> 需安装 ffmpeg 否则无法生效
+> 需安装 ffmpeg 否则无法生效，默认开启高清语音，需安装枫叶，土块等包含高清语音的插件或独立的[高清语音模块](https://github.com/xiaotian2333/YunzaiBOT-HD-Voice-module)
 
 ### 新闻
 

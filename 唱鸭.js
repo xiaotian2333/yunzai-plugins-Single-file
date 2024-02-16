@@ -4,7 +4,6 @@
 
 // 从 '../../lib/plugins/plugin.js' 文件中导入 plugin
 import plugin from '../../lib/plugins/plugin.js'
-import { segment } from 'oicq'
 
 // 定义一个名为 example 的类，继承自 plugin 类
 export class example extends plugin {
@@ -33,12 +32,13 @@ export class example extends plugin {
 			.then(data => {
 				// 提取出data中的audioSrc并发送语音
 				logger.debug('[唱鸭]获取到歌曲链接：',data.data.audioSrc)
-				this.e.reply(segment.record(data.data.audioSrc))
+				// this.e.reply(segment.record(data.data.audioSrc)) //普通语音
+				e.reply(uploadRecord(data.data.audioSrc,0,false)) //高清语音,参数说明 ：1.音频链接 2.音频时长 欺骗，0=关闭 3.压缩音质
 				// 提取出data中的lyrics并发送歌词
 				logger.debug('[唱鸭]获取到歌词：',data.data.lyrics)
 				// 处理歌词换行
 				let lyrics = data.data.lyrics.replace(/ /g, "\n");
-				lyrics = "歌手：" + data.data.nickname + "\n" + lyrics + "\n---\n歌曲链接\n" + data.data.audioSrc;
+				lyrics = "歌手：" + data.data.nickname + "\n" + lyrics/* + "\n---\n歌曲链接\n" + data.data.audioSrc*/;
 				e.reply(lyrics)
 			})
 			.catch(error => {
