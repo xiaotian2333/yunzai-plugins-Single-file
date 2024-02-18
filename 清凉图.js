@@ -2,7 +2,6 @@
 // 开源地址 https://github.com/xiaotian2333/yunzai-plugins-Single-file
 
 import plugin from '../../lib/plugins/plugin.js'
-import fetch from "node-fetch"
 
 //是否允许私聊使用，设为false则禁止私聊使用（主人除外）
 let group = true
@@ -40,9 +39,6 @@ export class ql extends plugin {
             if (e.isPrivate && !e.isMaster) {
                 return true
             }
-        let msg = e.msg
-        msg = msg.replace(/清凉图/g)
-        if (!msg) return
         e.reply(segment.image('https://imgapi.cn/cos.php'))
         return true
     }
