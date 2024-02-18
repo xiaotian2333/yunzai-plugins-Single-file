@@ -30,15 +30,14 @@ export class example extends plugin {
     		return response.json();
   			})
 			.then(data => {
-				let m = data.data.title + "\n"
-				let n = data.data.images.join("\n---\n");
-				m = m + n
-				e.reply(m)
+				e.reply(data.data.title)
+				data.data.images.forEach(image_url => {
+					e.reply(segment.image(image_url))
 			})
 			.catch(error => {
 				//输出错误提示
 				logger.error('获取错误：', error);
 			});
+		})
 	}
 }
-
