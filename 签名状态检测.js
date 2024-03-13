@@ -38,13 +38,18 @@ export class qsign extends plugin {
           name: 'Qsign-5',
           provider: 'hanxuan'
         },
-        'https://qsign.xt-url.com?key=XxxX': {
-          name: '小天cf反代抱脸',
-          provider: 'hanxuan & xiaotian'
+        'https://t1.qsign.xt-url.com?key=xiaotian': {
+          name: '小天t1节点',
+          provider: 'xiaotian（崩了进群628306033反馈）'
         },
-        'http://119.188.240.80:56613?key=xiaotian': {
-          name: '蓝天云',
-          provider: 'xiaotian'
+        // 时雨签名不需要密钥，为了兼容代码加上key字段
+        'http://gz.console.microgg.cn:2536?key=null': {
+        	name: '时雨-1',
+        	provider: '时雨'
+        },
+        'http://110.40.249.125:2536?key=null': {
+          name: '时雨-2',
+          provider: '时雨'
         }
       }
 
