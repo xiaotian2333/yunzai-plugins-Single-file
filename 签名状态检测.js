@@ -17,6 +17,7 @@ export class qsign extends plugin {
   async qsign(e) {
       // 定义一个对象，存储每个链接的名字及提供者
       // 链接必须带上正确的 key
+      // qq字段为可选项，部分节点是白名单的需要填写白名单里的qq才可以检测
       let publicUrls = {
         'https://1.qsign.icu?key=XxxX': {
           name: 'Qsign-1',
@@ -39,17 +40,19 @@ export class qsign extends plugin {
           provider: 'hanxuan'
         },
         'https://t1.qsign.xt-url.com?key=xiaotian': {
-          name: '小天t1节点',
+          name: '小天t1节点反代',
           provider: 'xiaotian（崩了进群628306033反馈）'
         },
         // 时雨签名不需要密钥，为了兼容代码加上key字段
         'http://gz.console.microgg.cn:2536?key=null': {
         	name: '时雨-1',
-        	provider: '时雨'
+        	provider: '时雨',
+          qq: '123456'
         },
         'http://110.40.249.125:2536?key=null': {
           name: '时雨-2',
-          provider: '时雨'
+          provider: '时雨',
+          qq: '123456'
         }
       }
 
@@ -75,13 +78,25 @@ export class qsign extends plugin {
           else {
             // 开始处理链接
             let parts = publicUrl.split("?");
+            // 处理白名单qq
+            qq = 2854196310
+            if (publicUrl.hasOwnProperty("qq")) {
+              qq = publicUrls[publicUrl].qq
+            }
             // 开始模拟icqq请求
-            let sign = await fetch(`${parts[0]}/sign?${parts[1]}&uin=2854196310&qua=${res.data.protocol.qua}&cmd=sign&seq=1848698645&buffer=0C099F0C099F0C099F&guid=123456&android_id=2854196310`); 
+            let sign = await fetch(
+              `${parts[0]}/sign?${parts[1]}&uin=${qq}&qua=${res.data.protocol.qua}&cmd=sign&seq=1848698645&buffer=0C099F0C099F0C099F&guid=123456&android_id=2854196310`,{
+                headers: {
+                  'User-Agent': 'icqq@0.6.10 (Released on 2024/2/3)'
+                }
+              }
+            ) 
             sign = await sign.json();
             if (sign.code == 0 && sign.msg == "success") {msgList_ += `版本:${res.data.protocol.version}\n状态:正常✅`}
             else {msgList_ += `状态:异常❗：签名失败`}
           }
         }
+      
         // 基础请求未成功
         catch(err) {msgList_ += `状态:异常❗：接口请求错误\n${err.message}`}
         // 提交信息到合并信息列表
