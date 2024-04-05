@@ -16,9 +16,12 @@ export class qsign extends plugin {
 
   async qsign(e) {
     await e.reply('正在检测各签名服务可用性...', true) // 开始检测提示
-    // 定义一个对象，存储每个链接的名字及提供者
-    // 链接必须带上正确的 key
-    // qq字段为可选项，部分节点是白名单的需要填写白名单里的qq才可以检测
+    /** 定义一个列表，存储每个链接的名字及提供者
+    * 链接必须带上正确的 key
+    * @name 签名的显示名字
+    * @provider 签名的提供者
+    * @qq 可选项，部分节点是白名单的需要填写白名单里的qq才可以检测
+    */
     let publicUrls = {
       'http://1.qsign.icu?key=XxxX': {
         name: 'Qsign-1',
@@ -57,16 +60,18 @@ export class qsign extends plugin {
       }
     }
 
-    // 合并转发消息初始化
+    /** 合并转发消息列表 */
     let msgList = []
     // 第一条消息（置顶消息），如不需要可删除或注释掉
     msgList.push({
       user_id: '系统消息',
       message: '状态说明\n正常✅：签名可以正常使用\n异常❗：签名无法正常使用'
     })
-    // 兼容TRSS崽
+    /** 兼容TRSS崽用的长消息文本 */
     let mdmsg = '状态说明\n正常✅：签名可以正常使用\n异常❗：签名无法正常使用'
+
     // 不知道为啥直接用云崽的api会乱返回崽消息，只能自己实现了
+    /** 云崽的类型 */
     let YZname = 'trss-yunzai'
     try {
       YZname = await JSON.parse(fs.readFileSync('package.json', 'utf8')).name
@@ -74,8 +79,10 @@ export class qsign extends plugin {
     catch(err) {
       logger.warn('[签名状态检测][qsign] 获取云崽版本失败，使用兼容模式发送')
     }
-    // 遍历对象的键，即链接
+
+    // 遍历列表的键，即链接
     for (let publicUrl of Object.keys(publicUrls)) {
+      /** 单个签名的消息体 */
       let msgList_ = `名称:${publicUrls[publicUrl].name}\n提供者:${publicUrls[publicUrl].provider}\n` //创建基础提示
       // 开始获取qq版本
       try {
@@ -92,15 +99,17 @@ export class qsign extends plugin {
             qq = publicUrls[publicUrl].qq
           }
           // 开始模拟icqq请求
+          const startTime = new Date().getTime() // 延迟检测开始
           let sign = await fetch(
             `${parts[0]}/sign?${parts[1]}&uin=${qq}&qua=${res.data.protocol.qua}&cmd=sign&seq=1848698645&buffer=0C099F0C099F0C099F&guid=123456&android_id=2854196310`,{
               headers: {
                 'User-Agent': 'icqq@0.6.10 (Released on 2024/2/3)'
               }
             }
-          ) 
+          )
+          const elapsedTime = new Date().getTime() - startTime // 延迟检测结束，计算时间差
           sign = await sign.json()
-          if (sign.code == 0 && sign.msg == "success") {msgList_ += `版本:${res.data.protocol.version}\n状态:正常✅`}
+          if (sign.code == 0 && sign.msg == "success") {msgList_ += `版本:${res.data.protocol.version}\n状态:正常✅\n延迟:${elapsedTime}ms`}
           else {msgList_ += `状态:异常❗：签名失败`}
         }
       }
@@ -127,9 +136,10 @@ export class qsign extends plugin {
         mdmsg += '\n---\n'+msgList_
       }
     }
+
     // 处理完毕，发送消息
     if (YZname == 'miao-yunzai') {
-      // 非TRSS发送合并转发消息
+      // 喵崽发送合并转发消息
       e.reply(await Bot[Bot.uin].pickUser(e.self_id).makeForwardMsg(msgList))
     } else {
       // 非喵崽发送长消息文本
