@@ -93,6 +93,11 @@ TODO
 随机发送一个小姐姐视频  
 感谢桑帛云API
 
+### 米游社cos
+
+获取米游社里的cos帖子并合并发送里面的图片或视频  
+二改自[此插件](https://gitee.com/bling_yshs/yunzaiv3-ys-plugin/blob/master/ys-%E7%B1%B3%E6%B8%B8%E7%A4%BEcos.js)
+
 ## 开源协议
 
 还没想好用什么开源协议，暂时不添加
