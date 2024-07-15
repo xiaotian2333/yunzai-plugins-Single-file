@@ -152,7 +152,6 @@ export class example extends plugin {
     }
 
     if (result.post.images.length === 1) {
-      e.reply('只有一张图片，图文混排发送')
       // 只有一张图片，图文混排发送
       e.reply([
         segment.image(result.post?.images[0]),
