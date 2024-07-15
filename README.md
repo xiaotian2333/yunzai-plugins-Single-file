@@ -96,7 +96,10 @@ TODO
 ### 米游社cos
 
 获取米游社里的cos帖子并合并发送里面的图片或视频  
-二改自[此插件](https://gitee.com/bling_yshs/yunzaiv3-ys-plugin/blob/master/ys-%E7%B1%B3%E6%B8%B8%E7%A4%BEcos.js)
+二改自[此插件](https://gitee.com/bling_yshs/yunzaiv3-ys-plugin/blob/master/ys-%E7%B1%B3%E6%B8%B8%E7%A4%BEcos.js)  
+
+要发送的图片/视频在超过一定大小后会提示，避免误以为机器人无反应  
+大宽带的服务器可以关闭或修改提示的阈值
 
 ## 开源协议
 
