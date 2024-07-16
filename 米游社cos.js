@@ -11,6 +11,8 @@
 const size_tips = true
 /** 文件大小提示值，仅在提示开关开启后生效，单位M */
 const size_than = 7
+/** 图文混排开关，开启后只有一张图片时将直接发送，而非发聊天记录 */
+const hybrid = true
 
 
 import plugin from '../../lib/plugins/plugin.js'
@@ -84,9 +86,9 @@ export class example extends plugin {
     let msgList = []
 
     // 这是在合并消息前面的提示
-    // user_id正常情况下应该填qq号，但是字符串也是可以用的，但是只能在手机端看见，电脑端会显示为QQ用户
     msgList.push({
-      user_id: '帖子信息',
+      user_id: 2854200865,
+      nickname: '帖子信息',
       message: `标题：${result.post.subject}\n原帖地址：https://www.miyoushe.com/ys/article/${result.post.post_id}\n作者：${result.user.nickname}`
     })
 
@@ -114,11 +116,13 @@ export class example extends plugin {
         }
 
         msgList.push({
-          user_id: Bot.uin,
+          user_id: e.user_id,
+          nickname: '视频',
           message: segment.video(video_data.url)
         })
         msgList.push({
-          user_id: '视频信息',
+          user_id: 2854200865,
+          nickname: '视频信息',
           message: `画质：${video_data.definition}(${video_data.height}x${video_data.width})\n编码格式：${video_data.format}(${video_data.codec})\n文件大小：${video_size}M`
         })
         e.reply(await Bot[Bot.uin].pickUser(e.self_id).makeForwardMsg(msgList))
@@ -151,8 +155,8 @@ export class example extends plugin {
       }
     }
 
-    if (result.post.images.length === 1) {
-      // 只有一张图片，图文混排发送
+    if (result.post.images.length === 1 && hybrid) {
+      // 只有一张图片，且开启图文混排时图文混排发送
       e.reply([
         segment.image(result.post?.images[0]),
         `标题：${result.post.subject}\n原帖地址：https://www.miyoushe.com/ys/article/${result.post.post_id}\n作者：${result.user.nickname}`
@@ -160,12 +164,13 @@ export class example extends plugin {
       return true
     }
 
-    // 这是正常取到多张图片的处理
+    // 这是正常取到多张图片的处理，同时兼容只有一张图片的情况
     // 获取图片列表
     let imgUrls = result.post?.images
     imgUrls.forEach(image => {
       msgList.push({
-        user_id: Bot.uin,
+        user_id: e.user_id,
+        nickname: '图片',
         message: segment.image(image)
       })
     })
