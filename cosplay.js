@@ -25,7 +25,7 @@ export class example extends plugin {
 		fetch('https://api.yujn.cn/api/cosplay.php?type=json')
   			.then(response => {
 				if (!response.ok) {
-					logger.erro('网络请求失败');
+					logger.error('网络请求失败');
 				}
     		return response.json();
   			})
