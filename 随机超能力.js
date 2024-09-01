@@ -1,7 +1,7 @@
 // 插件作者 xiaotian2333
 // 开源地址 https://github.com/xiaotian2333/yunzai-plugins-Single-file
-
-// 欢迎投稿超能力列表，前往 https://github.com/xiaotian2333/yunzai-plugins-Single-file/discussions/3 即可投稿
+// 单文件版本已停止更新，请安装新版本使用 https://github.com/xiaotian2333/special-ability
+// 欢迎投稿超能力列表，前往新版本页面即可查看要求
 
 // 能力列表链接
 const cnl_url = 'https://oss.xt-url.com/超能力/超能力列表.txt'

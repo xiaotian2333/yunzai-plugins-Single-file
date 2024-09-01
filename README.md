@@ -107,13 +107,14 @@ TODO
 
 ### 随机超能力
 
+此插件的单文件版本已停止更新，请[前往此处](https://github.com/xiaotian2333/special-ability)安装新版本  
+单文件版本仍然可用，但不会获得任何更新支持（云列表更新可正常获取）
+
 获取一个超能力及对应的副作用  
 内容仅供娱乐！！！
 默认开启大众模式，放心使用
 可选开启pro模式，会有更多能力及作用被加入
 支持本地语句，需自行配置
-
-可以前往[投稿专用帖](https://github.com/xiaotian2333/yunzai-plugins-Single-file/discussions/3)进行投稿，但是请注意投稿要求
 
 ## 开源协议
 
