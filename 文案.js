@@ -73,7 +73,7 @@ export class copywriting extends plugin {
           fnc: 'news'
         },
         {
-          reg: '^#?(青年)?大学习(完成|截图)',
+          reg: '^#?(青年)?大学习(完成|截图)?',
           fnc: 'qndxx'
         },
         {
@@ -90,6 +90,7 @@ export class copywriting extends plugin {
     let result = await get_data('https://open.iciba.com/dsapi/')
     result = await result.json()
     await e.reply(uploadRecord(result.tts, 0, false)) // 发送英语音频，不需要可删除或注释
+    //await e.reply(segment.record(result.tts)) //普通语音
     await e.reply(segment.image(result.fenxiang_img))
     return true
   }
