@@ -11,13 +11,10 @@
 const size_tips = true
 /** 文件大小提示值，仅在提示开关开启后生效，单位M */
 const size_than = 15
-/** 图文混排开关，开启后只有一张图片时将直接发送，而非发聊天记录 */
-const hybrid = true
 
 // 自动触发相关
 /** 自动发送cos的群/人列表
 * @param type (group,private)群还是人
-* @param hitokoto 是否开启推送一言
 */
 const postlist = {
   /** 人示例 */
@@ -39,9 +36,46 @@ const auto_cron = "30 8 12 * * *"
 //const auto_cron = "1 * * * * *" // 每分钟触发一次，测试用
 
 
-import plugin from '../../lib/plugins/plugin.js'
 import fetch from 'node-fetch'
 import schedule from 'node-schedule'
+import https from 'https'
+
+
+/** 统一图片请求
+ * 返回一个格式化数据
+ * @param url 图片的链接
+ * @returns return.success 是否成功
+ * @returns return.base64Img 成功时返回的base64值，不包含头
+ * @returns return.errmsg 失败时返回失败原因
+ */
+async function get_img(url) {
+  let base64Img
+  return new Promise(function (resolve) {
+    const options = {
+      headers: {
+        'User-Agent': 'msy-cos (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
+      }
+    }
+    let req = https.get(url, options, function (res) {
+      var chunks = []
+      var size = 0
+      res.on('data', function (chunk) {
+        chunks.push(chunk)
+        size += chunk.length //累加缓冲数据的长度
+      })
+      res.on('end', function (err) {
+        var data = Buffer.concat(chunks, size)
+        base64Img = data.toString('base64')
+        resolve({ success: true, base64Img })
+      })
+    })
+    req.on('error', (e) => {
+      resolve({ success: false, errmsg: e.message })
+    })
+    req.end()
+  })
+}
+
 
 /** 统一主动信息发送
  * 成功true，失败false
@@ -192,25 +226,35 @@ async function mian(sender, source, channel_id, tips) {
     }
   }
 
-  if (result.post.images.length === 1 && hybrid) {
-    // 只有一张图片，且开启图文混排时图文混排发送
-    post_msg([
-      segment.image(result.post?.images[0]),
-      `标题：${result.post.subject}\n原帖地址：\nhttps://www.miyoushe.com/ys/article/${result.post.post_id}\n作者：${result.user.nickname}`
-    ], source, channel_id)
-    return true
-  }
-
   // 这是正常取到多张图片的处理，同时兼容只有一张图片的情况
   // 获取图片列表
-  let imgUrls = result.post?.images
-  imgUrls.forEach(image => {
-    msgList.push({
-      user_id: sender,
-      nickname: '图片',
-      message: segment.image(image)
-    })
-  })
+  const imgUrls = result.post?.images
+  for (const image of imgUrls) {
+    // 米游社从2024年10月12日起开始在域名upload-bbs.miyoushe.com拦截ua axios/1.7.7
+    // 临时解决方法为升级或降低axios版本即可，反正别是1.7.7
+    // 或者换个请求域名，这个域名暂时没有拦截
+    // image = image.replace('upload-bbs.miyoushe.com','upload-bbs.mihoyo.com')
+
+    // 改为使用自定义UA请求，插件获取图片后传base64给icqq
+    // 真tm麻烦，本来一行代码就行了，搞这么多事
+
+    const img = await get_img(image)
+    if (!img.success) {
+      logger.error(`[米游社cos][图片请求]图片请求失败，原因：${img.errmsg}`)
+      msgList.push({
+        user_id: sender,
+        nickname: '图片',
+        message: '该图片请求失败，详情请查看日志'
+      })
+    } else {
+      msgList.push({
+        user_id: sender,
+        nickname: '图片',
+        message: segment.image(`base64://${img.base64Img}`)
+      })
+    }
+
+  }
   return msgList
 }
 
@@ -238,7 +282,7 @@ export class example extends plugin {
       // 私聊
       channel_id = e.from_id
     }
-    e.reply(await Bot[Bot.uin].makeForwardMsg(await mian(e.user_id, e.message_type, channel_id, size_tips)))
+    await e.reply(await Bot[Bot.uin].makeForwardMsg(await mian(e.user_id, e.message_type, channel_id, size_tips)))
     return true
   }
 }
@@ -247,7 +291,7 @@ export class example extends plugin {
  * @time 毫秒
  */
 function sleep(time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
+  return new Promise((resolve) => setTimeout(resolve, time))
 }
 
 /** 主动触发-发到指定群 */
