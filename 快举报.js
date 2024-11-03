@@ -2,6 +2,9 @@
 // 开源地址 https://github.com/xiaotian2333/yunzai-plugins-Single-file
 // 灵感来源为简幻欢群机器人，但代码均为原创
 
+// 由于新版快举报实现逻辑过于复杂，并入群管插件中
+// 单文件版本已停止更新，请安装新版本使用 https://github.com/xiaotian2333/xiaotian-qunguan
+
 const QQ = '1719549416' // 举报信息发到这个QQ号，填你自己的
 
 import common from "../../lib/common/common.js"
@@ -9,7 +12,7 @@ import common from "../../lib/common/common.js"
 // 用户举报信息存放
 let Select_list = {} // 举报类型
 let violator_list = {} // 被举报者
-
+// 配置举报类型
 const ly = {
   1: '发布色情/违法信息',
   2: '存在诈骗骗钱行为',
@@ -37,17 +40,12 @@ export class report extends plugin {
 
   // 用户触发快举报
   async trigger(e) {
-    e.reply(`===快举报===
-[0] 关闭快举报
-[1] 发布色情/违法信息
-[2] 存在诈骗骗钱行为
-[3] 提问群公告已存在问题
-[4] 水军/营销广告
-[5] 网络暴力/侵权
-[6] 无底线追星
-[7] 以上内容均不贴切
-------------------
-*发送对应序号来选择`, true)
+    let msg = '===快举报===\n'
+    for (let tmp of Object.keys(ly)) {
+      msg = `${msg}[${tmp}] ${ly[tmp]}\n`
+    }
+    msg = `${msg}------------------\n*发送对应序号来选择`
+    e.reply(msg, true)
 
     this.setContext('Select') // 监听用户信息，触发选择理由流程
     return true //返回这个可能会存在bug，但是先留着
