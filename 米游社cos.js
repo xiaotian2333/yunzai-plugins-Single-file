@@ -38,43 +38,6 @@ const auto_cron = "30 8 12 * * *"
 
 import fetch from 'node-fetch'
 import schedule from 'node-schedule'
-import https from 'https'
-
-
-/** 统一图片请求
- * 返回一个格式化数据
- * @param url 图片的链接
- * @returns return.success 是否成功
- * @returns return.base64Img 成功时返回的base64值，不包含头
- * @returns return.errmsg 失败时返回失败原因
- */
-async function get_img(url) {
-  let base64Img
-  return new Promise(function (resolve) {
-    const options = {
-      headers: {
-        'User-Agent': 'msy-cos (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
-      }
-    }
-    let req = https.get(url, options, function (res) {
-      var chunks = []
-      var size = 0
-      res.on('data', function (chunk) {
-        chunks.push(chunk)
-        size += chunk.length //累加缓冲数据的长度
-      })
-      res.on('end', function (err) {
-        var data = Buffer.concat(chunks, size)
-        base64Img = data.toString('base64')
-        resolve({ success: true, base64Img })
-      })
-    })
-    req.on('error', (e) => {
-      resolve({ success: false, errmsg: e.message })
-    })
-    req.end()
-  })
-}
 
 
 /** 统一主动信息发送
@@ -113,7 +76,7 @@ async function get_data() {
     { forumId: '65', gameType: '8' },
     // 崩环3
     //由于崩环3没有专门的cos分区，因此可能导致很多杂乱的东西，自行考虑是否开启，默认关闭
-    { forumId: '4', gameType: '1' }
+    // { forumId: '4', gameType: '1' }
   ]
   /** 随机生成0到3的整数，用于随机选择 config 里的其中一个并保存到 selected 变量 */
   const selected = config[Math.floor(Math.random() * 4)]
@@ -226,7 +189,7 @@ async function mian(sender, source, channel_id, tips) {
     }
   }
 
-  // 这是正常取到多张图片的处理，同时兼容只有一张图片的情况
+  // 这是正常取到多张图片的处理
   // 获取图片列表
   const imgUrls = result.post?.images
   for (const image of imgUrls) {
@@ -235,25 +198,20 @@ async function mian(sender, source, channel_id, tips) {
     // 或者换个请求域名，这个域名暂时没有拦截
     // image = image.replace('upload-bbs.miyoushe.com','upload-bbs.mihoyo.com')
 
-    // 改为使用自定义UA请求，插件获取图片后传base64给icqq
-    // 真tm麻烦，本来一行代码就行了，搞这么多事
-
-    const img = await get_img(image)
-    if (!img.success) {
-      logger.error(`[米游社cos][图片请求]图片请求失败，原因：${img.errmsg}`)
-      msgList.push({
-        user_id: sender,
-        nickname: '图片',
-        message: '该图片请求失败，详情请查看日志'
-      })
-    } else {
-      msgList.push({
-        user_id: sender,
-        nickname: '图片',
-        message: segment.image(`base64://${img.base64Img}`)
-      })
-    }
-
+    // 自定义icqq的图片请求ua，感谢寒暄
+    segment.image = (file, name) => ({
+      type: 'image',
+      file,
+      name,
+      headers: {
+        'User-Agent': 'msy-cos (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
+      }
+    })
+    msgList.push({
+      user_id: sender,
+      nickname: '图片',
+      message: segment.image(image)
+    })
   }
   return msgList
 }
