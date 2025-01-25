@@ -123,7 +123,7 @@ export class bigmodel extends plugin {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": await get_token(),
-                "User-Agent": "GML (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
+                "User-Agent": "GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
             },
             body: JSON.stringify(data)
         })
