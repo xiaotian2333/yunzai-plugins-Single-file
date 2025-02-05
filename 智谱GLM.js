@@ -62,6 +62,10 @@ export class bigmodel extends plugin {
                     reg: '',
                     fnc: 'chat',
                     log: false
+                },
+                {
+                    reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)',
+                    fnc: 'clear',
                 }
             ]
         })
@@ -100,18 +104,31 @@ export class bigmodel extends plugin {
 
         logger.info(`${e.group_id}_${e.user_id} 发送了消息：${msg}`)
 
+
+        let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
+
+
+        if (msg_log == 'none') {
+            // 如果msg_log不存在，初始化msg_log
+            msg_log = [{
+                "role": "system",
+                "content": system_prompt
+            }]
+
+        } else {
+            // 如果msg_log存在，获取msg_log
+            msg_log = await redis.get(`GLM_chat_log/${e.group_id}_${e.user_id}`)
+            msg_log = JSON.parse(msg_log)
+        }
+        // 添加聊天信息
+        msg_log.push({
+            "role": "user",
+            "content": msg
+        })
+
         const data = {
             "model": `${model}`,
-            "messages": [
-                //{
-                //    "role": "system",
-                //    "content": system_prompt
-                //},
-                {
-                    "role": "user",
-                    "content": `${system_prompt}我对你说${msg}`
-                }
-            ],
+            "messages": msg_log,
             "do_sample": "true",
             "temperature": "0.8", // 温度，0.8是默认值，可以调整
             "stream": "false",
@@ -128,7 +145,7 @@ export class bigmodel extends plugin {
             body: JSON.stringify(data)
         })
         Reply = await Reply.json()
-        let content = Reply.choices[0].message.content
+        const content = Reply.choices[0].message.content
 
         // 输出过滤
         //if (list.some(item => content.includes(item))) {
@@ -138,7 +155,20 @@ export class bigmodel extends plugin {
         //    return true
         //}
 
+        msg_log.push({
+            "role": "assistant",
+            "content": content
+        })
+        // 保存对话记录
+        await redis.set(`GLM_chat_log/${e.group_id}_${e.user_id}`, JSON.stringify(msg_log), { EX: 60 * 60 * 24 * 7 }) // 保存到redis，过期时间为7天
         e.reply(content)
+        return true
+    }
+
+    async clear(e) {
+        // if (!e.isMaster) { return false } // 只允许主人使用
+        await redis.del(`GLM_chat_log/${e.group_id}_${e.user_id}`)
+        e.reply('对话记录已清除')
         return true
     }
 }
