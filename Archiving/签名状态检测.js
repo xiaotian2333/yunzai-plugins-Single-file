@@ -23,13 +23,13 @@ export class qsign extends plugin {
     * @qq 可选项，部分节点是白名单的需要填写白名单里的qq才可以检测
     */
     let publicUrls = {
-      'http://1.qsign.icu?key=XxxX': {
-        name: 'Qsign-1',
-        provider: 'hanxuan'
+      'https://qsign.trpgbot.com?key=null': {
+        name: 'Cloudflare - High Capacity - M1',
+        provider: '然'
       },
-      'http://2.qsign.icu?key=XxxX': {
-        name: 'Qsign-2',
-        provider: 'hanxuan'
+      'https://zyr15r-astralqsign.hf.space?key=null': {
+        name: 'HuggingFace - High Capacity - M2',
+        provider: '然'
       },
       'http://3.qsign.icu?key=XxxX': {
         name: 'Qsign-3',
@@ -94,7 +94,7 @@ export class qsign extends plugin {
           // 开始处理链接
           let parts = publicUrl.split("?")
           // 处理白名单qq
-          let qq = 2854196310
+          let qq = Bot.uin
           if (publicUrl.hasOwnProperty("qq")) {
             qq = publicUrls[publicUrl].qq
           }
