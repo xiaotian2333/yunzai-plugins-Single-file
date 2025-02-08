@@ -112,6 +112,24 @@
 |system_prompt | 详情见源码 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 
+### 智谱绘图
+
+基于智谱大模型的绘图插件  
+默认使用`CogView-4`模型
+
+需要配置自己的key，否则无法使用
+前往[智谱官网](https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D)申请即可
+
+> 新用户赠送400次免费额度，使用完毕后可换成免费模型或继续付费使用
+
+#### 可配置的参数如下
+
+| 设置项 | 默认设置 | 说明 |
+| --- | --- | --- |
+| Authorization | 空 | `API Key` 如不填则默认使用沉浸式翻译的Token |
+| model | CogView-4 | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
+| list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
+
 ## 非常规插件
 
 此类插件仅供参考使用
