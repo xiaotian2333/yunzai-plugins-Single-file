@@ -126,7 +126,7 @@
 
 | 设置项 | 默认设置 | 说明 |
 | --- | --- | --- |
-| Authorization | 空 | `API Key` 如不填则默认使用沉浸式翻译的Token |
+| Authorization | 空 | `API Key` 如不填则无法使用 |
 | model | CogView-4 | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 
