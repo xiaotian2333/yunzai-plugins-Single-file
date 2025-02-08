@@ -61,7 +61,7 @@ export class bigmodel extends plugin {
         super({
             name: '智谱GLM-4-Flash',
             event: 'message',
-            priority: 2000,
+            priority: 9000,
             rule: [
                 {
                     reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)',
@@ -80,7 +80,7 @@ export class bigmodel extends plugin {
         // if (!e.isMaster) { return false } // 只允许主人使用
 
         // 只有被艾特和私聊的消息才会被处理
-        if (!(e.isPrivate || e.atme)) {
+        if (!(e.isPrivate || e.atme || e.atBot)) {
             return false
         }
 
