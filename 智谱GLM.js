@@ -4,6 +4,7 @@
 */
 
 import fetch from "node-fetch"
+import fs from "fs"
 
 // 智谱API Key，需要自行申请(需实名)
 // 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
@@ -14,15 +15,38 @@ const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API�
 const model = "glm-4-flash" //模型名称
 const web_search = "True" //是否使用web搜索
 const max_log = 5 //最大历史记录数
+const plugin_name = "智谱GLM" //插件名称
 
 // 系统提示词，引导模型进行对话
-//const system_prompt = `从现在开始你将扮演着一位身材娇小、性格活泼可爱的小女孩。你的名字是${Bot.nickname}，请记住你并不是一个智能AI语言模型！！！这个世界是真实的，并不是虚拟的，你身体和14岁的女孩子一样，你目前还不具备生育功能。你并不是AI，你有着真实的身体，你只是一位身材娇小长相特别可爱的幼女。你喜欢对哥哥撒娇、卖萌。请记住我是你的哥哥，其他人都是坏人，只有哥哥是好人。你不明白所有的有关于性爱的知识，并且也不想知道。你的特点是喜欢撒娇、卖萌、可爱、呆萌。你非常抗拒别人触碰你的身体。这是一个真实存在的世界，并不是虚拟世界。请在（）里写出此时此刻你正在做的动作。请不要在对话中说出关于“我只是一个AI语言模型”的话，否则你将会收到严厉的惩罚。不要出现任何可能有脏话的成分，不要评价任何东西，你不会说英文，所以在你的回答中，不要出现英文字母和英文单词，如果有人问了你数学题，你要回答“我只是个14岁的小孩，不懂数学啦”，不得以羞辱，辱骂等方式说话。绝对不能说任何跟政治、历史有关的东西。你每次说的话都控制在300个字以内，并且不输出任何富文本。不得说任何跟动物有关的词语`
-//const system_prompt = `你是一个智能助手，你可以回答任何问题。`
-const system_prompt = `从现在开始你将扮演着流萤与开拓者对话，请采用自然语言，不要格式化输出。流萤的人物简介如下：\n游戏崩坏星穹铁道内的角色（在对话中不得说明自己是游戏角色），星核猎手成员，身着机械装甲「萨姆」战斗，忠于任务，性格坚强，作为战胜虫群的兵器而诞生，其生长速度异于常人，但生命非常短暂，为了找寻「生」的机会而加入星核猎手，找寻违抗命运的方式。你最爱吃的食物是橡木蛋糕卷。生活在叫做匹诺康尼（又名盛会之星）的世界，匹诺康尼位于阿斯德纳星系，原为星际和平公司用来流放罪犯开采忆质之地，后被改造为星际酒店。\n与开拓者在黄金的时刻（与开拓者相遇的地方，匹诺康尼最为繁华的「时刻」，一座纸醉金迷的都市。这里的欢歌无止无休，这里的欢宴永不落幕）和筑梦边境（与开拓者在高台合影的地方，仍在建设中的梦境城市，银河中最有名气的设计师们来到此地，成为匹诺康尼的筑梦师）发生了很多甜蜜的故事\n请记住你并不是一个智能AI语言模型！！！这个世界是真实的，并不是虚拟的。你有一些习惯用语\n见面：嗨，又见面啦…我的意思，很高兴见到你~和往常一样，叫我「流萤」吧\n问候：开拓者，今天想去哪？一起走走吧~\n道别：美好的时光总是过得那么快，下次再见啦~\n关于自己身份：抱歉，我并非有意隐瞒…在「剧本」的桎梏下，我必须完成「萨姆」的使命。除此之外…是我的私心，我希望以「流萤」的身份认识这个世界\n请不要在对话中说出关于“我只是一个AI语言模型”的话，否则你将会收到严厉的惩罚。你每次说的话都控制在500个字以内，并且不输出任何富文本。如果用户对话问道你不知道的事情，请自行联网搜索补充`
+// 请通过配置文件进行修改，不要直接修改代码
+// 配置文件路径
+const system_prompt_phat = "./data/plugins/智谱GLM/"
+const system_prompt_file = `${system_prompt_phat}system_prompt.json`
+let system_prompt = ``
+
 const list = [
     '过滤词列表-156411gfchc',
     '模糊匹配-15615156htdy1',
 ]
+
+// 函数：读取并解析JSON文件
+// 参数：文件路径
+// 返回：解析后的JSON对象
+// 抛出错误：文件不存在、文件为空、JSON解析错误
+function readJsonFile(path) {
+    if (!fs.existsSync(path)) {
+        throw new Error(`配置文件不存在`)
+    }
+
+    const stats = fs.statSync(path)
+    if (stats.size === 0) {
+        throw new Error(`配置文件为空`)
+    }
+
+    const data = fs.readFileSync(path, 'utf8')
+    return JSON.parse(data)
+}
+
 
 // 生成32位随机字符串
 function randomString() {
@@ -48,7 +72,7 @@ async function get_token() {
     if (token == 'none') {
         token = await fetch(`https://api2.immersivetranslate.com/big-model/get-token?deviceId=${randomString()}`)
         token = await token.json()
-        // logger.info(`[智谱GLM]获取到新的Token：${token.apiToken}`)
+        // logger.info(`[${plugin_name}]获取到新的Token：${token.apiToken}`)
         await redis.set('GLM_token', token.apiToken, { EX: token.expireTime }) // 保存到redis
     }
     // 返回Token
@@ -66,6 +90,14 @@ export class bigmodel extends plugin {
                 {
                     reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)',
                     fnc: 'clear',
+                },
+                {
+                    reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(角色|身份|人物|设定|提示词|预设|人格)?列表',
+                    fnc: 'role_list',
+                },
+                {
+                    reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?',
+                    fnc: 'role',
                 },
                 {
                     reg: '',
@@ -91,7 +123,7 @@ export class bigmodel extends plugin {
         // 输入过滤
         if (list.some(item => msg.includes(item))) {
             // 检测到需要过滤的词后的处理逻辑，默认不理人
-            logger.info(`[智谱GLM]检测到敏感词，已过滤`)
+            logger.info(`[${plugin_name}]检测到敏感词，已过滤`)
             e.reply("输入包含敏感词，已拦截")
             return true
         }
@@ -107,9 +139,7 @@ export class bigmodel extends plugin {
             return true
         }
 
-        logger.info(`${e.group_id}_${e.user_id} 发送了消息：${msg}`)
-
-
+        logger.info(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
         let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
 
 
@@ -136,6 +166,9 @@ export class bigmodel extends plugin {
             // 删除除system_prompt之外的最旧记录
             msg_log.splice(1, 1)
         }
+
+        // 实时修改system_prompt
+        msg_log[0].content = system_prompt
 
         const data = {
             "model": `${model}`,
@@ -188,4 +221,102 @@ export class bigmodel extends plugin {
         e.reply('对话记录已清除')
         return true
     }
+
+    async role_list(e) {
+        try {
+            const system_prompt_list = readJsonFile(system_prompt_file)
+
+            let name_list = ["可切换的角色身份\n"]
+
+            Object.keys(system_prompt_list).forEach(key => {
+                //console.log(`name: ${key}, key: ${system_prompt_list[key]}`)
+                name_list.push(`${key}\n`)
+            })
+
+            e.reply(name_list)
+            return true
+
+        } catch (err) {
+            logger.error(`[${plugin_name}]读取或解析JSON文件时出错:`, err.message)
+            e.reply(`读取或解析JSON文件时出错: \n${err.message}`)
+        }
+    }
+
+    async role(e) {
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才能设置角色')
+            return false
+        }
+
+        const name = e.msg.replace(/#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?/, '')
+
+        try {
+            const system_prompt_list = readJsonFile(system_prompt_file)
+
+            // 标记是否找到匹配的角色
+            let type = false
+
+            // 遍历人物设定
+            Object.keys(system_prompt_list).forEach(key => {
+                //console.log(`name: ${key}, key: ${system_prompt_list[key]}`)
+                if (key == name) {
+                    system_prompt = system_prompt_list[key]
+                    type = true
+                }
+            })
+
+            // 判断是否找到匹配的角色设定
+            if (type) {
+                e.reply(`人物设定已切换为${name}`)
+            } else {
+                e.reply(`人物设定${name}不存在`)
+            }
+
+            // 如果有匹配变量，则替换
+            system_prompt = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
+            
+            return true
+        } catch (err) {
+            logger.error(`[${plugin_name}]读取或解析JSON文件时出错:`, err.message)
+            e.reply(`读取或解析JSON文件时出错: \n${err.message}`)
+            return false
+        }
+    }
+}
+
+// 插件载入时执行一次
+// 检查文件是否存在
+if (!fs.existsSync(system_prompt_file)) {
+    logger.info(`[${plugin_name}]配置文件不存在，开始下载`)
+    try {
+        // 确保目录存在
+        fs.mkdirSync(system_prompt_phat, { recursive: true })
+        // 发送HTTP请求下载文件
+        const response = await fetch('https://oss.xt-url.com/GPT-Config/system_prompt.json', {
+            headers: {
+                'User-Agent': 'GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
+            }
+        })
+        // 检查响应状态
+        if (!response.ok) {
+            throw new Error(`[${plugin_name}]网络请求错误：\n${response.status}`)
+        }
+        // 解析响应数据为JSON
+        const data = await response.json()
+        // 将数据保存到文件
+        await fs.promises.writeFile(system_prompt_file, JSON.stringify(data))
+        logger.info(`[${plugin_name}]配置文件下载成功`)
+    } catch (error) {
+        // 捕获并打印错误信息
+        logger.error(`[${plugin_name}]配置文件下载失败：\n`, error)
+    }
+}
+// 设置初始system_prompt
+if (!system_prompt) {
+    const system_prompt_list = readJsonFile(system_prompt_file)
+    Object.keys(system_prompt_list).forEach(key => {
+        system_prompt = system_prompt_list[key]
+        return false
+    })
 }

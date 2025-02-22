@@ -101,6 +101,26 @@
 
 支持开箱即用，但仍建议配置自己的key  
 
+直接艾特机器人即可对话  
+可发送 `#重置对话` 清除聊天记录  
+管理员可使用 `#智谱切换预设` 切换预设  
+使用 `#智谱预设列表` 查看预设列表  
+
+插件初次加载时自动下载云端配置文件  
+默认路径位于`./data/plugins/智谱GLM/system_prompt.json`  
+
+<details>
+<summary>默认格式</summary>
+
+``` json
+{
+    "预设名1": "预设内容1",
+    "预设名2": "预设内容2"
+}
+```
+
+</details>
+
 #### 可配置的参数如下
 
 | 设置项 | 默认设置 | 说明 |
@@ -109,7 +129,7 @@
 | model | glm-4-flash | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | web_search | True | 是否开启联网功能，联网搜索至少需要消耗`1000`token |
 | max_log | 5 | 聊天记忆深度，建议范围3~8 |
-|system_prompt | 详情见源码 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
+| system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 
 ### 智谱绘图
