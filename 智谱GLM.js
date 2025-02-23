@@ -142,7 +142,7 @@ export class bigmodel extends plugin {
         // if (!e.isMaster) { return false } // 只允许主人使用
 
         // 只有被艾特和私聊的消息才会被处理
-        if (!(e.isPrivate || e.atme || e.atBot)) {
+        if (!(e.isPrivate || e.atme || e.atBot || e.msg.includes(Bot.nickname))) {
             return false
         }
 
