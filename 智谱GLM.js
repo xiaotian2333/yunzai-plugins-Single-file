@@ -79,6 +79,32 @@ async function get_token() {
     return await redis.get('GLM_token')
 }
 
+// 下载系统提示词
+async function dlowadSystemPrompt(url) {
+    try {
+        // 确保目录存在
+        fs.mkdirSync(system_prompt_phat, { recursive: true })
+        // 发送HTTP请求下载文件
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
+            }
+        })
+        // 检查响应状态
+        if (!response.ok) {
+            throw new Error(`[${plugin_name}]网络请求错误：\n${response.status}`)
+        }
+        // 解析响应数据为JSON
+        const data = await response.json()
+        // 将数据保存到文件
+        await fs.promises.writeFile(system_prompt_file, JSON.stringify(data))
+        return true
+    } catch (error) {
+        // 捕获并打印错误信息
+        //logger.error(`[${plugin_name}]配置文件下载失败：\n`, error)
+        return false
+    }
+}
 
 export class bigmodel extends plugin {
     constructor() {
@@ -88,16 +114,20 @@ export class bigmodel extends plugin {
             priority: 9000,
             rule: [
                 {
-                    reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)',
+                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)',
                     fnc: 'clear',
                 },
                 {
-                    reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(角色|身份|人物|设定|提示词|预设|人格)?列表',
+                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(角色|身份|人物|设定|提示词|预设|人格)?列表',
                     fnc: 'role_list',
                 },
                 {
-                    reg: '#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?',
+                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?',
                     fnc: 'role',
+                },
+                {
+                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)',
+                    fnc: 'pull_1',
                 },
                 {
                     reg: '',
@@ -118,7 +148,7 @@ export class bigmodel extends plugin {
 
         // 删除不需要的部分
         let msg = e.msg
-        msg = msg.replace(' ', '');
+        msg = msg.replace(' ', '')
 
         // 输入过滤
         if (list.some(item => msg.includes(item))) {
@@ -133,8 +163,8 @@ export class bigmodel extends plugin {
             e.reply('请输入内容')
             return false
         }
-        // 消息长度限制，正常聊天50字足以，字数开放越多越容易被洗脑
-        if (msg.length > 50) {
+        // 消息长度限制，正常聊天100字足以，字数开放越多越容易被洗脑
+        if (msg.length > 100) {
             e.reply('输入文本长度过长')
             return true
         }
@@ -251,6 +281,11 @@ export class bigmodel extends plugin {
 
         const name = e.msg.replace(/#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?/, '')
 
+        if (!name) {
+            e.reply('请输入要切换的预设\n\n发送 #智谱预设列表 查看可切换的预设')
+            return false
+        }
+
         try {
             const system_prompt_list = readJsonFile(system_prompt_file)
 
@@ -270,12 +305,14 @@ export class bigmodel extends plugin {
             if (type) {
                 e.reply(`人物设定已切换为${name}`)
             } else {
-                e.reply(`人物设定${name}不存在`)
+                e.reply(`人物设定${name}不存在，想要创建一个临时预设吗\n\n发送 #创建临时预设 进行创建`)
+                this.setContext('set_system_prompt_1')
+                return true
             }
 
             // 如果有匹配变量，则替换
             system_prompt = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
-            
+
             return true
         } catch (err) {
             logger.error(`[${plugin_name}]读取或解析JSON文件时出错:`, err.message)
@@ -283,35 +320,99 @@ export class bigmodel extends plugin {
             return false
         }
     }
-}
 
-// 插件载入时执行一次
-// 检查文件是否存在
-if (!fs.existsSync(system_prompt_file)) {
-    logger.info(`[${plugin_name}]配置文件不存在，开始下载`)
-    try {
-        // 确保目录存在
-        fs.mkdirSync(system_prompt_phat, { recursive: true })
-        // 发送HTTP请求下载文件
-        const response = await fetch('https://oss.xt-url.com/GPT-Config/system_prompt.json', {
-            headers: {
-                'User-Agent': 'GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
-            }
-        })
-        // 检查响应状态
-        if (!response.ok) {
-            throw new Error(`[${plugin_name}]网络请求错误：\n${response.status}`)
+    async pull_1(e) {
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才覆盖预设文件')
+            return false
         }
-        // 解析响应数据为JSON
-        const data = await response.json()
-        // 将数据保存到文件
-        await fs.promises.writeFile(system_prompt_file, JSON.stringify(data))
-        logger.info(`[${plugin_name}]配置文件下载成功`)
-    } catch (error) {
-        // 捕获并打印错误信息
-        logger.error(`[${plugin_name}]配置文件下载失败：\n`, error)
+        e.reply(`警告：此操作不可撤销！！！\n\n确定要进行下载吗，这将会覆盖当前的配置文件\n\n确定覆盖发送 #确认覆盖预设文件 进行下一步操作`)
+        this.setContext('pull_2')
+        return true
+    }
+
+    async pull_2(e) {
+        e = this.e
+        this.finish('pull_2')
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才覆盖预设文件')
+            return false
+        }
+        if (e.msg == '#确认覆盖预设文件') {
+            const type = await dlowadSystemPrompt('https://oss.xt-url.com/GPT-Config/system_prompt.json')
+            if (type) {
+                e.reply(`配置文件覆盖成功`)
+                return true
+            } else {
+                e.reply(`配置文件覆盖失败`)
+                return true
+            }
+        } else {
+            e.reply(`未发送确认指令，取消覆盖预设文件`)
+            return true
+        }
+    }
+
+    async set_system_prompt_1(e) {
+        e = this.e
+        this.finish('set_system_prompt_1')
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才创建临时预设')
+            return false
+        }
+        // 删除不需要的部分
+        let msg = e.msg
+        msg = msg.replace(' ', '')
+
+        if (msg == '#创建临时预设') {
+            e.reply(`请发送要设置的提示词`)
+            this.setContext('set_system_prompt_2')
+            return true
+        } else {
+            return true
+
+        }
+    }
+
+    async set_system_prompt_2(e) {
+        e = this.e
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才创建临时预设')
+            return false
+        }
+        // 删除不需要的部分
+        let msg = e.msg
+        msg = msg.replace(' ', '')
+
+        if (!msg) {
+            e.reply(`请发送要设置的提示词`)
+            return true
+        } else {
+            this.finish('set_system_prompt_2')
+            system_prompt = msg
+            e.reply(`已创建并应用临时预设：\n${system_prompt}`)
+            return true
+        }
     }
 }
+
+// 以下代码在插件载入时执行一次
+
+// 检查配置文件是否存在
+if (!fs.existsSync(system_prompt_file)) {
+    logger.info(`[${plugin_name}]配置文件不存在，开始下载`)
+    const type = await dlowadSystemPrompt('https://oss.xt-url.com/GPT-Config/system_prompt.json')
+    if (type) {
+        logger.info(`[${plugin_name}]配置文件下载成功`)
+    } else {
+        logger.error(`[${plugin_name}]配置文件下载失败`)
+    }
+}
+
 // 设置初始system_prompt
 if (!system_prompt) {
     const system_prompt_list = readJsonFile(system_prompt_file)
