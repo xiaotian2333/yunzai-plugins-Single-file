@@ -126,7 +126,7 @@ export class bigmodel extends plugin {
                     fnc: 'role',
                 },
                 {
-                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)',
+                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)?',
                     fnc: 'pull_1',
                 },
                 {
