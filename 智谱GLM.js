@@ -16,6 +16,7 @@ const model = "glm-4-flash" //模型名称
 const web_search = "True" //是否使用web搜索
 const max_log = 5 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
+const Bot_name = Bot.nickname
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
@@ -106,6 +107,14 @@ async function dlowadSystemPrompt(url) {
     }
 }
 
+// 获取默认系统提示词
+async function get_default_prompt() {
+    const system_prompt_list = readJsonFile(system_prompt_file)
+    Object.keys(system_prompt_list).forEach(key => {
+        return system_prompt_list[key]
+    })
+}
+
 export class bigmodel extends plugin {
     constructor() {
         super({
@@ -142,7 +151,7 @@ export class bigmodel extends plugin {
         // if (!e.isMaster) { return false } // 只允许主人使用
 
         // 只有被艾特和私聊的消息才会被处理
-        if (!(e.isPrivate || e.atme || e.atBot || e.msg.includes(Bot.nickname))) {
+        if (!(e.isPrivate || e.atme || e.atBot || e.msg.includes(Bot_name))) {
             return false
         }
 
@@ -415,9 +424,5 @@ if (!fs.existsSync(system_prompt_file)) {
 
 // 设置初始system_prompt
 if (!system_prompt) {
-    const system_prompt_list = readJsonFile(system_prompt_file)
-    Object.keys(system_prompt_list).forEach(key => {
-        system_prompt = system_prompt_list[key]
-        return false
-    })
+    system_prompt = await get_default_prompt()
 }
