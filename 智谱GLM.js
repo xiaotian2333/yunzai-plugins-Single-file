@@ -16,7 +16,7 @@ const model = "glm-4-flash" //模型名称
 const web_search = "True" //是否使用web搜索
 const max_log = 5 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
-const Bot_name = Bot.nickname
+const Bot_name = Bot.nickname //机器人名称
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
@@ -150,14 +150,14 @@ export class bigmodel extends plugin {
     async chat(e) {
         // if (!e.isMaster) { return false } // 只允许主人使用
 
-        // 只有被艾特和私聊的消息才会被处理
-        if (!(e.isPrivate || e.atme || e.atBot || e.msg.includes(Bot_name))) {
-            return false
-        }
-
         // 删除不需要的部分
         let msg = e.msg
         msg = msg.replace(' ', '')
+
+        // 只有被艾特和私聊的消息才会被处理
+        if (!(e.isPrivate || e.atme || e.atBot || msg.includes(Bot_name))) {
+            return false
+        }
 
         // 输入过滤
         if (list.some(item => msg.includes(item))) {
@@ -178,7 +178,7 @@ export class bigmodel extends plugin {
             return true
         }
 
-        logger.info(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
+        logger.mark(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
         let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
 
 
@@ -234,6 +234,12 @@ export class bigmodel extends plugin {
             body: JSON.stringify(data)
         })
         Reply = await Reply.json()
+
+        if (Reply.error) {
+            e.reply(`发生错误：\n${Reply.error.message}`)
+            return false
+        }
+
         const content = Reply.choices[0].message.content
 
         // 输出过滤
