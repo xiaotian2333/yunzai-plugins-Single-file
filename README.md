@@ -97,7 +97,7 @@
 ### 智谱GLM
 
 基于智谱大模型的聊天插件  
-默认使用`glm-4-flash`模型
+默认使用`glm-4-flash-250414`模型
 
 支持开箱即用，但仍建议配置自己的key  
 
@@ -126,11 +126,14 @@
 | 设置项 | 默认设置 | 说明 |
 | --- | --- | --- |
 | Authorization | 空 | `API Key` 如不填则默认使用沉浸式翻译的Token |
-| model | glm-4-flash | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
-| web_search | True | 是否开启联网功能，联网搜索至少需要消耗`1000`token |
-| max_log | 5 | 聊天记忆深度，建议范围3~8 |
+| model | glm-4-flash-250414 | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
+| web_search | false | 是否开启联网功能，联网搜索至少需要消耗`1000`token |
+| max_log | 10 | 聊天记忆深度，建议范围5~20 |
+| think | true | 支持思考的模型是否输出思考过程 |
 | system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
+
+> 从2025年6月1日0点起，联网功能收费单价为0.01元/次，因此改为默认关闭
 
 ### 智谱绘图
 

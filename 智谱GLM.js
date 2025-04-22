@@ -5,24 +5,26 @@
 
 import fetch from "node-fetch"
 import fs from "fs"
+import schedule from 'node-schedule'
 
 // 智谱API Key，需要自行申请(需实名)
 // 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
 
-// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash 模型，其他模型需自行申请）
+// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版），glm-z1-flash（推理） 模型，其他模型需自行申请）
 const Authorization = "" //智谱API Key
 const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
-const model = "glm-4-flash" //模型名称
-const web_search = "True" //是否使用web搜索
-const max_log = 5 //最大历史记录数
+const model = "glm-4-flash-250414" //模型名称
+const web_search = "false" //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
+const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
 const Bot_name = Bot.nickname //机器人名称
+const think = true //支持思考的模型是否输出思考过程
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
 // 配置文件路径
-const system_prompt_phat = "./data/plugins/智谱GLM/"
-const system_prompt_file = `${system_prompt_phat}system_prompt.json`
+const plugin_data_path = `./data/plugins/智谱GLM/`
+const system_prompt_file = `${plugin_data_path}system_prompt.json`
 let system_prompt = ``
 
 const list = [
@@ -84,7 +86,7 @@ async function get_token() {
 async function dlowadSystemPrompt(url) {
     try {
         // 确保目录存在
-        fs.mkdirSync(system_prompt_phat, { recursive: true })
+        fs.mkdirSync(plugin_data_path, { recursive: true })
         // 发送HTTP请求下载文件
         const response = await fetch(url, {
             headers: {
@@ -113,6 +115,24 @@ async function get_default_prompt() {
     Object.keys(system_prompt_list).forEach(key => {
         return system_prompt_list[key]
     })
+}
+
+/** 时间戳转可视化日期函数
+ * @param timestamp 毫秒级时间戳
+ * 返回格式参考：2023,10,05
+ */
+function formatTimestamp(timestamp = Date.now()) {
+    const date = new Date(timestamp)
+
+    // 获取年、月、日
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0') // 月份从0开始，需要加1，并确保是两位数
+    const day = String(date.getDate()).padStart(2, '0')
+
+    // 格式化日期字符串
+    const formattedDate = `${year},${month},${day}`
+
+    return formattedDate
 }
 
 export class bigmodel extends plugin {
@@ -150,6 +170,9 @@ export class bigmodel extends plugin {
     async chat(e) {
         // if (!e.isMaster) { return false } // 只允许主人使用
 
+        // 先过滤非文本信息
+        if (!e.msg) { return false }
+
         // 删除不需要的部分
         let msg = e.msg
         msg = msg.replace(' ', '')
@@ -167,7 +190,7 @@ export class bigmodel extends plugin {
             return true
         }
 
-        // 如果 msg 为空，则返回
+        // 再过滤空信息
         if (!msg) {
             e.reply('请输入内容')
             return false
@@ -209,6 +232,7 @@ export class bigmodel extends plugin {
         // 实时修改system_prompt
         msg_log[0].content = system_prompt
 
+        // 构建请求体
         const data = {
             "model": `${model}`,
             "messages": msg_log,
@@ -223,7 +247,7 @@ export class bigmodel extends plugin {
                 }
             }]
         }
-
+        // 网络请求
         let Reply = await fetch(url, {
             method: 'POST',
             headers: {
@@ -234,29 +258,54 @@ export class bigmodel extends plugin {
             body: JSON.stringify(data)
         })
         Reply = await Reply.json()
-
+        // 错误处理
         if (Reply.error) {
             e.reply(`发生错误：\n${Reply.error.message}`)
             return false
         }
+        // 获取回复内容
+        let content = Reply.choices[0].message.content
 
-        const content = Reply.choices[0].message.content
+        // 过滤思考过程
+        if (content.startsWith('\n<think>') || content.startsWith('<think>')) {
+            // 检测到有思考过程
+            logger.debug(`[${plugin_name}]检测到有思考过程`)
 
-        // 输出过滤
-        //if (list.some(item => content.includes(item))) {
-        //    // 检测到需要过滤的词后的处理逻辑，默认不理人
-        //    logger.info(`[智谱GLM]检测到输出包含敏感词，已过滤：${content}`)
-        //    e.reply("输出包含敏感词，已拦截")
-        //    return true
-        //}
+            let think_text = content.split('</think>')
+            think_text[0] = think_text[0].replace('<think>', '').trim()
+            content = think_text[1].trim()
 
+            if (think) {
+                logger.debug(`[${plugin_name}]用户开启了发送思考过程`)
+                // 发送思考过程
+                let msgList = [{
+                    user_id: 2854200865,
+                    nickname: '思考过程',
+                    message: think_text[0]
+                }]
+                await e.reply(await Bot[Bot.uin].makeForwardMsg(msgList))
+            }
+        }
+
+        // 添加到对话记录
         msg_log.push({
             "role": "assistant",
             "content": content
         })
+
         // 保存对话记录
         await redis.set(`GLM_chat_log/${e.group_id}_${e.user_id}`, JSON.stringify(msg_log), { EX: 60 * 60 * 24 * 7 }) // 保存到redis，过期时间为7天
         e.reply(content)
+
+        // 统计token用量
+        // 今日用量
+        const token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+        await redis.set(`GLM_chat_token/today`, token_today + Reply.usage.total_tokens)
+        // 总用量
+        const token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
+        await redis.set(`GLM_chat_token/Statistics`, token_history + Reply.usage.total_tokens)
+
+
         return true
     }
 
@@ -432,3 +481,22 @@ if (!fs.existsSync(system_prompt_file)) {
 if (!system_prompt) {
     system_prompt = await get_default_prompt()
 }
+
+
+// 每日统计token
+schedule.scheduleJob('0 0 0 * * *', async () => {
+//schedule.scheduleJob('1 * * * * *', async () => { // 测试用
+    logger.info(`[${plugin_name}]开始统计昨日token`)
+    try {
+        // 获取Redis中的数据
+        const token_history = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+
+        // 重置Redis中的数据
+        await redis.set(`GLM_chat_token/today`, 0)
+
+        // 写入CSV文件
+        fs.appendFileSync(`${plugin_data_path}/token_log.csv`, `${formatTimestamp(new Date() - 24 * 60 * 60 * 1000)},${token_history}\n`, 'utf8')
+    } catch (error) {
+        console.error(`Failed to export data to CSV: ${error}`)
+    }
+})
