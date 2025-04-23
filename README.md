@@ -109,6 +109,8 @@
 插件初次加载时自动下载云端配置文件  
 默认路径位于`./data/plugins/智谱GLM/system_prompt.json`  
 
+支持统计每日token用量，并于每日0点自动导出昨日统计到数据目录  
+
 <details>
 <summary>默认格式</summary>
 

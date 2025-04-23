@@ -76,7 +76,7 @@ async function get_token() {
     if (token == 'none') {
         token = await fetch(`https://api2.immersivetranslate.com/big-model/get-token?deviceId=${randomString()}`)
         token = await token.json()
-        // logger.info(`[${plugin_name}]获取到新的Token：${token.apiToken}`)
+        logger.debug(`[${plugin_name}]获取到新的Token：${token.apiToken}`)
         await redis.set('GLM_token', token.apiToken, { EX: token.expireTime }) // 保存到redis
     }
     // 返回Token
@@ -160,6 +160,10 @@ export class bigmodel extends plugin {
                     fnc: 'pull_1',
                 },
                 {
+                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(token|令牌|统计|tokens)?(信息|数据)?',
+                    fnc: 'token_statistics',
+                },
+                {
                     reg: '',
                     fnc: 'chat',
                     log: false
@@ -186,7 +190,7 @@ export class bigmodel extends plugin {
         // 输入过滤
         if (list.some(item => msg.includes(item))) {
             // 检测到需要过滤的词后的处理逻辑，默认不理人
-            logger.info(`[${plugin_name}]检测到敏感词，已过滤`)
+            logger.mark(`[${plugin_name}]检测到敏感词，已过滤`)
             e.reply("输入包含敏感词，已拦截")
             return true
         }
@@ -197,7 +201,7 @@ export class bigmodel extends plugin {
             return false
         }
         // 消息长度限制，正常聊天100字足以，字数开放越多越容易被洗脑
-        if (msg.length > 100) {
+        if (msg.length > 1999900) {
             e.reply('输入文本长度过长')
             return true
         }
@@ -289,6 +293,7 @@ export class bigmodel extends plugin {
             }
         }
 
+        content = content.trim()
         // 添加到对话记录
         msg_log.push({
             "role": "assistant",
@@ -464,6 +469,13 @@ export class bigmodel extends plugin {
             return true
         }
     }
+
+    async token_statistics(e) {
+        const token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+        const token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
+        e.reply(`今日已使用${token_today}token，共使用${token_history}token\n每日token统计信息可在插件数据目录token_log.csv查看`)
+        return true
+    }
 }
 
 // 以下代码在插件载入时执行一次
@@ -487,7 +499,7 @@ if (!system_prompt) {
 
 // 每日统计token
 schedule.scheduleJob('0 0 0 * * *', async () => {
-//schedule.scheduleJob('1 * * * * *', async () => { // 测试用
+    //schedule.scheduleJob('1 * * * * *', async () => { // 测试用
     logger.info(`[${plugin_name}]开始统计昨日token`)
     try {
         // 获取Redis中的数据
@@ -499,6 +511,6 @@ schedule.scheduleJob('0 0 0 * * *', async () => {
         // 写入CSV文件
         fs.appendFileSync(`${plugin_data_path}/token_log.csv`, `${formatTimestamp(new Date() - 24 * 60 * 60 * 1000)},${token_history}\n`, 'utf8')
     } catch (error) {
-        console.error(`Failed to export data to CSV: ${error}`)
+        logger.error(`[${plugin_name}]导出数据失败: ${error}`)
     }
 })
