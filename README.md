@@ -128,6 +128,7 @@
 | Authorization | 空 | `API Key` 如不填则默认使用沉浸式翻译的Token |
 | model | glm-4-flash-250414 | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | web_search | false | 是否开启联网功能，联网搜索至少需要消耗`1000`token |
+| search_engine | search_std | 使用哪个搜索引擎，可配置项参考[这里](https://www.bigmodel.cn/pricing) |
 | max_log | 10 | 聊天记忆深度，建议范围5~20 |
 | think | true | 支持思考的模型是否输出思考过程 |
 | system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |

@@ -15,6 +15,7 @@ const Authorization = "" //智谱API Key
 const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
 const model = "glm-4-flash-250414" //模型名称
 const web_search = "false" //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
+const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
 const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
 const Bot_name = Bot.nickname //机器人名称
@@ -234,7 +235,7 @@ export class bigmodel extends plugin {
 
         // 构建请求体
         const data = {
-            "model": `${model}`,
+            "model": model,
             "messages": msg_log,
             "do_sample": "true",
             "temperature": "0.8", // 温度，0.8是默认值，可以调整
@@ -243,7 +244,8 @@ export class bigmodel extends plugin {
             "tools": [{
                 "type": "web_search",
                 "web_search": {
-                    "enable": web_search
+                    "enable": web_search,
+                    "search_engine": search_engine,  // 选择搜索引擎类型
                 }
             }]
         }
