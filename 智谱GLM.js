@@ -315,10 +315,16 @@ export class bigmodel extends plugin {
 
         // 统计token用量
         // 今日用量
-        const token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+        let token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+        if (token_today == 'none') {
+            token_today = 0
+        }
         await redis.set(`GLM_chat_token/today`, token_today + Reply.usage.total_tokens)
         // 总用量
-        const token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
+        let token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
+        if (token_history == 'none') {
+            token_history = 0
+        }
         await redis.set(`GLM_chat_token/Statistics`, token_history + Reply.usage.total_tokens)
 
 
