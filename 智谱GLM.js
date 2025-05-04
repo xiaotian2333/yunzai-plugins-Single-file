@@ -34,9 +34,6 @@ const list = [
     '模糊匹配-15615156htdy1',
 ]
 
-// 全局动态变量
-let model_list = await readJsonFile(model_list_file)
-
 // 函数：读取并解析JSON文件
 // 参数：文件路径
 // 返回：解析后的JSON对象
@@ -143,7 +140,7 @@ function formatTimestamp(timestamp = Date.now()) {
 export class bigmodel extends plugin {
     constructor() {
         super({
-            name: '智谱GLM-4-Flash',
+            name: '智谱GLM',
             event: 'message',
             priority: 9000,
             rule: [
@@ -212,8 +209,8 @@ export class bigmodel extends plugin {
             e.reply('请输入内容')
             return false
         }
-        // 消息长度限制，正常聊天100字足以，字数开放越多越容易被洗脑
-        if (msg.length > 1999900) {
+        // 消息长度限制，正常聊天200字足以，字数开放越多越容易被洗脑
+        if (msg.length > 200) {
             e.reply('输入文本长度过长')
             return true
         }
@@ -597,6 +594,9 @@ if (!fs.existsSync(model_list_file)) {
         logger.error(`[${plugin_name}]模型列表下载失败`)
     }
 }
+
+// 全局动态变量
+let model_list = await readJsonFile(model_list_file)
 
 // 每日统计token
 schedule.scheduleJob('0 0 0 * * *', async () => {
