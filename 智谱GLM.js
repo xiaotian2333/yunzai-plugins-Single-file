@@ -13,25 +13,29 @@ import schedule from 'node-schedule'
 // 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版），glm-z1-flash（推理） 模型，其他模型需自行申请）
 const Authorization = "" //智谱API Key
 const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
-const model = "glm-4-flash-250414" //模型名称
+let model = "glm-4-flash-250414" //模型名称
 const web_search = "false" //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
 const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
 const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
 const Bot_name = Bot.nickname //机器人名称
-const think = true //支持思考的模型是否输出思考过程
+const think_print = true //支持思考的模型是否输出思考过程
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
 // 配置文件路径
 const plugin_data_path = `./data/plugins/智谱GLM/`
 const system_prompt_file = `${plugin_data_path}system_prompt.json`
+const model_list_file = `${plugin_data_path}model_list.json`
 let system_prompt = ``
 
 const list = [
     '过滤词列表-156411gfchc',
     '模糊匹配-15615156htdy1',
 ]
+
+// 全局动态变量
+let model_list = await readJsonFile(model_list_file)
 
 // 函数：读取并解析JSON文件
 // 参数：文件路径
@@ -84,7 +88,7 @@ async function get_token() {
 }
 
 // 下载系统提示词
-async function dlowadSystemPrompt(url) {
+async function Download_file(url, path) {
     try {
         // 确保目录存在
         fs.mkdirSync(plugin_data_path, { recursive: true })
@@ -101,7 +105,7 @@ async function dlowadSystemPrompt(url) {
         // 解析响应数据为JSON
         const data = await response.json()
         // 将数据保存到文件
-        await fs.promises.writeFile(system_prompt_file, JSON.stringify(data))
+        await fs.promises.writeFile(path, JSON.stringify(data))
         return true
     } catch (error) {
         // 捕获并打印错误信息
@@ -144,24 +148,32 @@ export class bigmodel extends plugin {
             priority: 9000,
             rule: [
                 {
-                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)',
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)/,
                     fnc: 'clear',
                 },
                 {
-                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(角色|身份|人物|设定|提示词|预设|人格)?列表',
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(角色|身份|人物|设定|提示词|预设|人格)列表/,
                     fnc: 'role_list',
                 },
                 {
-                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?',
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)/,
                     fnc: 'role',
                 },
                 {
-                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)?',
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)?/,
                     fnc: 'pull_1',
                 },
                 {
-                    reg: '^#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(token|令牌|统计|tokens)?(信息|数据)?',
-                    fnc: 'token_statistics',
+                    reg: /^#(?:(智谱|[Gg][Ll][Mm])(状态|info)(信息|数据)?|(状态|info)(信息|数据)?)$/,
+                    fnc: 'GLM_info',
+                },
+                {
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(模型|model)(列表|信息|数据)?/,
+                    fnc: 'model_list_help',
+                },
+                {
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(强制|强行)?(更换|切换|换|改|设置)(模型|model)/,
+                    fnc: 'model_set',
                 },
                 {
                     reg: '',
@@ -281,7 +293,7 @@ export class bigmodel extends plugin {
             think_text[0] = think_text[0].replace('<think>', '').trim()
             content = think_text[1].trim()
 
-            if (think) {
+            if (think_print) {
                 logger.debug(`[${plugin_name}]用户开启了发送思考过程`)
                 // 发送思考过程
                 let msgList = [{
@@ -350,7 +362,7 @@ export class bigmodel extends plugin {
             return false
         }
 
-        const name = e.msg.replace(/#(智谱)?(GLM|glm|Glm|GML|gml|Gml)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)?/, '')
+        const name = e.msg.replace(/^#(智谱|[Gg][Ll][Mm])?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)/, '')
 
         if (!name) {
             e.reply('请输入要切换的预设\n\n发送 #智谱预设列表 查看可切换的预设')
@@ -412,7 +424,7 @@ export class bigmodel extends plugin {
             return false
         }
         if (e.msg == '#确认覆盖预设文件') {
-            const type = await dlowadSystemPrompt('https://oss.xt-url.com/GPT-Config/system_prompt.json')
+            const type = await Download_file('https://oss.xt-url.com/GPT-Config/system_prompt.json', system_prompt_file)
             if (type) {
                 e.reply(`配置文件覆盖成功`)
                 return true
@@ -470,10 +482,89 @@ export class bigmodel extends plugin {
         }
     }
 
-    async token_statistics(e) {
+    async GLM_info(e) {
         const token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
         const token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
-        e.reply(`今日已使用${token_today}token，共使用${token_history}token\n每日token统计信息可在插件数据目录token_log.csv查看`)
+        const tips = model_list.tips[Math.floor(Math.random() * model_list.tips.length)];
+        const msg = [
+            `=====${plugin_name}当前状态=====\n`,
+            `今日token消耗：${token_today}\n`,
+            `累计token消耗：${token_history}\n`,
+            `当前模型：${model}\n`,
+            `数据版本：${model_list.version}\n`,
+            `=====================\n`,
+            `你知道吗：${tips}`
+
+        ]
+        e.reply(msg)
+        return true
+    }
+
+    async model_list_help(e) {
+        let msgList = []
+        msgList.push(
+            {
+                user_id: 2854200865,
+                nickname: '更新时间',
+                message: model_list.data
+            },
+            {
+                user_id: 2854200865,
+                nickname: '当前版本',
+                message: model_list.version
+            }
+        )
+
+        //model_list.bigmodel.model_list
+
+        for (const [modelName, modelInfo] of Object.entries(model_list.bigmodel.model_list)) {
+            msgList.push({
+                user_id: 2854200865,
+                nickname: '模型介绍',
+                message: `模型：${modelName}\n介绍：${modelInfo.instructions}\n价格：${modelInfo.Price}\n类型：${modelInfo.type}`
+            })
+        }
+
+        // 发送消息
+        await e.reply(await Bot[Bot.uin].makeForwardMsg(msgList))
+        return true
+    }
+
+    async model_set(e) {
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才能更改模型')
+            return false
+        }
+
+        // 获取命令参数
+        const model_name = e.msg.replace(/^#(智谱|[Gg][Ll][Mm])?(强制|强行)?(更换|切换|换|改|设置)(模型|model)\s*/, '')
+        if (!model_name) {
+            e.reply('请指定要切换的模型名称\n\n可发送 #模型列表 查看所有可用模型')
+            return false
+        }
+        // 强制切换则不检查模型是否存在
+        if (e.msg.includes('强制') || e.msg.includes('强行')) {
+            model = model_name
+            e.reply(`已强制切换模型为：${model_name}`)
+            return true
+        }
+
+        // 检查模型是否存在
+        let finish = false
+        for (const [modelName] of Object.entries(model_list.bigmodel.model_list)) {
+            if (modelName === model_name) {
+                finish = true
+            }
+        }
+        if (!finish) {
+            e.reply(`模型 ${model_name} 不存在，请检查模型名称是否正确\n\n可发送 #模型列表 查看所有可用模型\n如确实需要切换请发送 #强制切换模型 进行切换`)
+            return false
+        }
+
+        // 切换模型
+        model = model_name
+        e.reply(`已切换模型为：${model_name}`)
         return true
     }
 }
@@ -482,10 +573,10 @@ export class bigmodel extends plugin {
 
 // 检查配置文件是否存在
 if (!fs.existsSync(system_prompt_file)) {
-    logger.info(`[${plugin_name}]配置文件不存在，开始下载`)
-    const type = await dlowadSystemPrompt('https://oss.xt-url.com/GPT-Config/system_prompt.json')
+    logger.mark(`[${plugin_name}]配置文件不存在，开始下载`)
+    const type = await Download_file('https://oss.xt-url.com/GPT-Config/system_prompt.json', system_prompt_file)
     if (type) {
-        logger.info(`[${plugin_name}]配置文件下载成功`)
+        logger.mark(`[${plugin_name}]配置文件下载成功`)
     } else {
         logger.error(`[${plugin_name}]配置文件下载失败`)
     }
@@ -496,11 +587,21 @@ if (!system_prompt) {
     system_prompt = await get_default_prompt()
 }
 
+// 检测模型列表文件是否存在
+if (!fs.existsSync(model_list_file)) {
+    logger.mark(`[${plugin_name}]模型列表不存在，开始下载`)
+    const type = await Download_file('https://oss.xt-url.com/GPT-Config/model_list.json', model_list_file)
+    if (type) {
+        logger.mark(`[${plugin_name}]模型列表下载成功`)
+    } else {
+        logger.error(`[${plugin_name}]模型列表下载失败`)
+    }
+}
 
 // 每日统计token
 schedule.scheduleJob('0 0 0 * * *', async () => {
     //schedule.scheduleJob('1 * * * * *', async () => { // 测试用
-    logger.info(`[${plugin_name}]开始统计昨日token`)
+    logger.mark(`[${plugin_name}]开始统计昨日token`)
     try {
         // 获取Redis中的数据
         const token_history = parseInt(await redis.get(`GLM_chat_token/today`), 10)
@@ -514,3 +615,34 @@ schedule.scheduleJob('0 0 0 * * *', async () => {
         logger.error(`[${plugin_name}]导出数据失败: ${error}`)
     }
 })
+
+// 每日检测模型更新
+schedule.scheduleJob('0 0 2 * * *', async () => {
+    //schedule.scheduleJob('1 * * * * *', async () => { // 测试用
+    logger.mark(`[${plugin_name}]开始检查模型列表更新`)
+
+    // 获取把本地模型列表版本
+    model_list = await readJsonFile(model_list_file)
+
+    // 获取云端模型列表版本
+    let Reply = await fetch('https://oss.xt-url.com/GPT-Config/model_list.json', {
+        headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
+        }
+    })
+    Reply = await Reply.json()
+
+    // 比较版本号
+    if (Reply.version == model_list.version) {
+        logger.mark(`[${plugin_name}]模型列表已是最新版本`)
+    } else {
+        logger.mark(`[${plugin_name}]发现新版本模型列表，正在更新中...`)
+
+        // 更新本地模型列表
+        fs.writeFileSync(model_list_file, JSON.stringify(Reply));
+
+        logger.mark(`[${plugin_name}]模型列表更新完成`)
+    }
+}
+)

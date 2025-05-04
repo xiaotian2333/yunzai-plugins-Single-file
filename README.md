@@ -106,18 +106,64 @@
 管理员可使用 `#智谱切换预设` 切换预设  
 使用 `#智谱预设列表` 查看预设列表  
 
+管理员可使用 `#智谱切换模型` 可在机器人运行时临时切换模型  
+使用 `#智谱模型列表` 查看模型列表  
+
 插件初次加载时自动下载云端配置文件  
-默认路径位于`./data/plugins/智谱GLM/system_prompt.json`  
+默认数据目录为`./data/plugins/智谱GLM/`  
 
 支持统计每日token用量，并于每日0点自动导出昨日统计到数据目录  
 
 <details>
 <summary>默认格式</summary>
 
+此处展示的文本限于篇幅，大幅精简且不会实时更新  
+如需查看原始文件请点击对应的链接查看  
+
+[system_prompt.json](https://oss.xt-url.com/GPT-Config/system_prompt.json)
+
 ``` json
 {
     "预设名1": "预设内容1",
     "预设名2": "预设内容2"
+}
+```
+
+[model_list.json](https://oss.xt-url.com/GPT-Config/model_list.json)
+
+``` json
+{
+    "data": "2025年5月4日",
+    "version": "1.2.2",
+    "author": "xiaotian2333",
+    "tips": [
+        "每日token统计信息可在插件数据目录token_log.csv查看"
+    ],
+    "bigmodel": {
+        "name": "智谱",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "instructions": "模型价格为官网公示价格",
+        "model_list": {
+            "glm-4-flash-250414": {
+                "instructions": "免费的语言模型",
+                "Price": "免费",
+                "free": true,
+                "type": "语言模型"
+            },
+            "glm-z1-air": {
+                "instructions": "具备强大推理能力，适用于需要深度推理的任务",
+                "Price": "0.5元|百万Tokens",
+                "free": false,
+                "type": "推理模型"
+            },
+            "codegeex-4": {
+                "instructions": "代码优化模型，专为程序员准备",
+                "Price": "0.1元|百万Tokens",
+                "free": false,
+                "type": "代码模型"
+            }
+        }
+    }
 }
 ```
 
@@ -128,11 +174,11 @@
 | 设置项 | 默认设置 | 说明 |
 | --- | --- | --- |
 | Authorization | 空 | `API Key` 如不填则默认使用沉浸式翻译的Token |
-| model | glm-4-flash-250414 | 模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
+| model | glm-4-flash-250414 | 默认模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | web_search | false | 是否开启联网功能，联网搜索至少需要消耗`1000`token |
 | search_engine | search_std | 使用哪个搜索引擎，可配置项参考[这里](https://www.bigmodel.cn/pricing) |
 | max_log | 10 | 聊天记忆深度，建议范围5~20 |
-| think | true | 支持思考的模型是否输出思考过程 |
+| think_print | true | 支持思考的模型是否输出思考过程 |
 | system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 
