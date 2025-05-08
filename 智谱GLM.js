@@ -14,7 +14,7 @@ import schedule from 'node-schedule'
 const Authorization = "" //智谱API Key
 const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
 let model = "glm-4-flash-250414" //模型名称
-const web_search = "false" //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
+let web_search = false //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
 const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
 const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
@@ -171,6 +171,10 @@ export class bigmodel extends plugin {
                 {
                     reg: /^#(智谱|[Gg][Ll][Mm])?(强制|强行)?(更换|切换|换|改|设置)(模型|model)/,
                     fnc: 'model_set',
+                },
+                {
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(开启|打开|关闭|取消)(联网|搜索|网络)/,
+                    fnc: 'web_search_set',
                 },
                 {
                     reg: '',
@@ -486,19 +490,27 @@ export class bigmodel extends plugin {
     }
 
     async GLM_info(e) {
+        // 取token用量
         const token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
         const token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
-        const tips = model_list.tips[Math.floor(Math.random() * model_list.tips.length)];
+
+        // 取随机提示
+        const tips = model_list.tips[Math.floor(Math.random() * model_list.tips.length)]
+
+        // 构建信息
         const msg = [
             `=====${plugin_name}当前状态=====\n`,
             `今日token消耗：${token_today}\n`,
             `累计token消耗：${token_history}\n`,
             `当前模型：${model}\n`,
             `数据版本：${model_list.version}\n`,
+            `联网能力：${web_search ? '开启' : '关闭'}\n`,
             `=====================\n`,
-            `你知道吗：${tips}`
+            `Tip：${tips}`
 
         ]
+
+        // 发送信息
         e.reply(msg)
         return true
     }
@@ -568,6 +580,26 @@ export class bigmodel extends plugin {
         // 切换模型
         model = model_name
         e.reply(`已切换模型为：${model_name}`)
+        return true
+    }
+    
+    async web_search_set(e) {
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才能更改联网设置')
+            return false
+        }
+
+        // 判断是开启还是关闭联网
+        if (e.msg.includes('开启') || e.msg.includes('打开')) {
+            web_search = true
+            e.reply(`已开启联网功能`)
+        }
+        if (e.msg.includes('关闭') || e.msg.includes('取消')) {
+            web_search = false
+            e.reply(`已关闭联网功能`)
+        }
+
         return true
     }
 }
