@@ -302,7 +302,7 @@ export class bigmodel extends plugin {
                     nickname: '思考过程',
                     message: think_text[0]
                 }]
-                await e.reply(await Bot[Bot.uin].makeForwardMsg(msgList))
+                await e.reply(await Bot.makeForwardMsg(msgList))
             }
         }
 

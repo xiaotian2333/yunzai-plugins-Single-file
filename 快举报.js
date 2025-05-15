@@ -7,8 +7,6 @@
 
 const QQ = '1719549416' // 举报信息发到这个QQ号，填你自己的
 
-import common from "../../lib/common/common.js"
-
 // 用户举报信息存放
 let Select_list = {} // 举报类型
 let violator_list = {} // 被举报者
@@ -96,7 +94,7 @@ export class report extends plugin {
     e.reply('举报成功，请等待管理组审核', true)
 
     // 私聊发送举报信息
-    common.relpyPrivate(QQ, [
+    Bot.pickFriend(QQ).sendMsg([
       '===快举报信息===\n',
       `来源群号：${e.group_id}\n`,
       `举报理由：${ly[Select_list[e.user_id]]}\n`,

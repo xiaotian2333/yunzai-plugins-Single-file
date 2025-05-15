@@ -89,8 +89,8 @@ export class copywriting extends plugin {
   async dsapi(e) {
     let result = await get_data('https://open.iciba.com/dsapi/')
     result = await result.json()
-    await e.reply(uploadRecord(result.tts, 0, false)) // 发送英语音频，不需要可删除或注释
-    //await e.reply(segment.record(result.tts)) //普通语音
+    //await e.reply(uploadRecord(result.tts, 0, false)) // 高清语音，需安装支持模块
+    await e.reply(segment.record(result.tts)) //普通语音
     await e.reply(segment.image(result.fenxiang_img))
     return true
   }
@@ -104,7 +104,7 @@ export class copywriting extends plugin {
 
   // 每日60秒新闻，数据来自《每天60秒读懂世界》公众号
   async news(e) {
-    e.reply(segment.image('https://api.jun.la/60s.php?format=image'))
+    await e.reply(segment.image('https://60s-api.viki.moe/v2/60s?encoding=image'))
     return true
   }
 

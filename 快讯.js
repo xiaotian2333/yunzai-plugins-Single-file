@@ -42,11 +42,11 @@ import schedule from 'node-schedule'
 function post_msg(msg, source, channel_id) {
   if (source == "group") {
     // 群
-    Bot[Bot.uin].pickGroup(channel_id).sendMsg(msg)
+    Bot.pickGroup(channel_id).sendMsg(msg)
     return true
   } else if (source == "private") {
     // 私聊
-    Bot[Bot.uin].pickUser(channel_id).sendMsg(msg)
+    Bot.pickUser(channel_id).sendMsg(msg)
     return true
   } else {
     logger.error(`[快讯][消息发送] 没有匹配的发送渠道，关键信息：source=${source},channel_id=${channel_id},msg=${msg}`)
@@ -133,7 +133,7 @@ async function mian(uin) {
       `发布时间：${formatTimeAgo(news.send_time)}\n`,
       `阅读原文：${removeParamsFromUrl(news.jump_url)}`
     ]
-    logger.info(news.title, news?.cover_url)
+    logger.debug(news.title, news?.cover_url)
     msgList.push({
       user_id: uin,
       nickname: '实时快讯',
@@ -171,7 +171,7 @@ export class example extends plugin {
       // 私聊
       channel_id = e.from_id
     }
-    await e.reply(await Bot[Bot.uin].makeForwardMsg(await mian(e.user_id)))
+    await e.reply(await Bot.makeForwardMsg(await mian(e.user_id)))
     return true
   }
 }
