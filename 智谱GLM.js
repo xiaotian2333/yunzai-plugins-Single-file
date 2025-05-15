@@ -541,7 +541,7 @@ export class bigmodel extends plugin {
         }
 
         // 发送消息
-        await e.reply(await Bot[Bot.uin].makeForwardMsg(msgList))
+        await e.reply(await Bot.makeForwardMsg(msgList))
         return true
     }
 
