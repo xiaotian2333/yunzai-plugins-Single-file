@@ -8,8 +8,9 @@ async function get_data(url) {
   let result = await fetch(url, {
     headers: {
       'User-Agent': 'copywriting (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
-    }
+    },
   })
+
   return result
 }
 
@@ -61,24 +62,28 @@ export class copywriting extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: '^#?(每|今)(日|天)(一)?(句|言|英语).*$',
+          reg: /^#?(每|今)(日|天)(一)?(句|言|英语).*$/,
           fnc: 'dsapi'
         },
         {
-          reg: "^#*(一言|壹言)$",
+          reg: /^#*(一言|壹言)$/,
           fnc: "hitokoto",
         },
         {
-          reg: '^#?(每日|今日|本日)?(新闻|60s|60S).*$',
+          reg: /^#?(每日|今日|本日)?(新闻|60s|60S).*$/,
           fnc: 'news'
         },
         {
-          reg: '^#?(青年)?大学习(完成|截图)?',
+          reg: /^#?(青年)?大学习(完成|截图)?/,
           fnc: 'qndxx'
         },
         {
-          reg: '^#?(古|诗|词)(名句)?',
+          reg: /^#?(古|诗|词)(名句)?/,
           fnc: 'poetry'
+        },
+        {
+          reg: /^#?历史上的今天/,
+          fnc: 'histoday'
         }
       ]
     })
@@ -104,7 +109,20 @@ export class copywriting extends plugin {
 
   // 每日60秒新闻，数据来自《每天60秒读懂世界》公众号
   async news(e) {
-    await e.reply(segment.image('https://60s-api.viki.moe/v2/60s?encoding=image'))
+    let result = await fetch('https://uapi.woobx.cn/app/alapi', {
+      method: 'POST',
+      headers: {
+        'User-Agent': 'copywriting (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)',
+        'Accept-Encoding': 'gzip'
+      },
+      body: new URLSearchParams({
+        'path': '/api/zaobao'
+      })
+    })
+    result = await result.json()
+
+    await e.reply(segment.record(result.data.audio))
+    await e.reply(segment.image(result.data.image))
     return true
   }
 
@@ -116,10 +134,50 @@ export class copywriting extends plugin {
     e.reply(segment.image(`https://${result}`))
   }
 
-  //古诗词名句
+  // 古诗词名句
   async poetry(e) {
     let result = await get_data('https://oiapi.net/API/Sentences')
     result = await result.json()
     e.reply(`${result.data.content}——${result.data.author}《${result.data.works}》`)
+  }
+
+  // 历史上的今天
+  async histoday(e) {
+    if (true) { e.reply('此功能极其危险，请谨慎开启\n如需开启请编辑源码注释或删除此行代码'); return true }
+    const today = new Date()
+    const month = Number(today.getMonth() + 1) // 月份从0开始，所以要加1
+    const day = Number(today.getDate())
+
+    let result = await get_data(`https://uapi.woobx.cn/app/histoday?month=${month}&day=${day}`)
+    result = await result.json()
+    let msg_list = []
+    msg_list.push({
+      user_id: 2854200865,
+      nickname: '今日日期',
+      message: `${month}月${day}日`
+    })
+    // 历史事件
+    result.data.forEach(event => {
+      let msg = [`${event.year}年 ${event.title}\n${event.content}`]
+
+      // 如果有图片，则添加图片
+      if (event.cover) {
+        msg.push(segment.image(event.cover))
+      }
+
+      // 如果有链接，则添加链接
+      if (event.detail) {
+        msg.push(`相关链接：${event.detail}`)
+      }
+
+      // 合并消息
+      msg_list.push({
+        user_id: 2854200865,
+        nickname: '历史事件',
+        message: msg
+      })
+    })
+
+    await e.reply(await Bot.makeForwardMsg(msg_list))
   }
 }
