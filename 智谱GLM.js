@@ -18,8 +18,7 @@ let web_search = false //是否使用web搜索，从2025年6月1日0点起，收
 const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
 const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
-const Bot_name = Bot.nickname //机器人名称
-const think_print = true //支持思考的模型是否输出思考过程
+const think_print = false //支持思考的模型是否输出思考过程
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
@@ -27,7 +26,7 @@ const think_print = true //支持思考的模型是否输出思考过程
 const plugin_data_path = `./data/plugins/智谱GLM/`
 const system_prompt_file = `${plugin_data_path}system_prompt.json`
 const model_list_file = `${plugin_data_path}model_list.json`
-let system_prompt = ``
+let system_prompt
 
 const list = [
     '过滤词列表-156411gfchc',
@@ -54,13 +53,15 @@ function readJsonFile(path) {
 
 
 // 生成32位随机字符串
+let res
 function randomString() {
+    if (res) { return res }
     let str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    let res = ""
     for (let i = 0; i < 32; i++) {
         let id = Math.ceil(Math.random() * str.length)
         res += str.charAt(id)
     }
+    logger.debug(`[${plugin_name}]生成新的设备ID：${res}`)
     return res
 }
 
@@ -90,6 +91,7 @@ async function Download_file(url, path) {
         // 确保目录存在
         fs.mkdirSync(plugin_data_path, { recursive: true })
         // 发送HTTP请求下载文件
+        logger.debug(`[${plugin_name}]正在下载来自 ${url} 的文件`)
         const response = await fetch(url, {
             headers: {
                 'User-Agent': 'GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
@@ -101,6 +103,7 @@ async function Download_file(url, path) {
         }
         // 解析响应数据为JSON
         const data = await response.json()
+        logger.debug(`[${plugin_name}]文件下载完备：\n${data}`)
         // 将数据保存到文件
         await fs.promises.writeFile(path, JSON.stringify(data))
         return true
@@ -135,6 +138,13 @@ function formatTimestamp(timestamp = Date.now()) {
     const formattedDate = `${year},${month},${day}`
 
     return formattedDate
+}
+
+/** 休眠函数
+ * @time 毫秒
+ */
+function sleep(time) {
+    return new Promise((resolve) => setTimeout(resolve, time))
 }
 
 export class bigmodel extends plugin {
@@ -195,14 +205,14 @@ export class bigmodel extends plugin {
         let msg = e.msg
         msg = msg.replace(' ', '')
 
-        // 只有被艾特和私聊的消息才会被处理
-        if (!(e.isPrivate || e.atme || e.atBot || msg.includes(Bot_name))) {
+        // 只有被艾特、私聊、命中机器人名字的消息才会被处理
+        if (!(e.isPrivate || e.atme || e.atBot || msg.includes(Bot.nickname))) {
             return false
         }
 
         // 输入过滤
         if (list.some(item => msg.includes(item))) {
-            // 检测到需要过滤的词后的处理逻辑，默认不理人
+            // 检测到需要过滤的词后的处理逻辑
             logger.mark(`[${plugin_name}]检测到敏感词，已过滤`)
             e.reply("输入包含敏感词，已拦截")
             return true
@@ -210,7 +220,6 @@ export class bigmodel extends plugin {
 
         // 再过滤空信息
         if (!msg) {
-            e.reply('请输入内容')
             return false
         }
         // 消息长度限制，正常聊天200字足以，字数开放越多越容易被洗脑
@@ -307,6 +316,7 @@ export class bigmodel extends plugin {
         }
 
         content = content.trim()
+
         // 添加到对话记录
         msg_log.push({
             "role": "assistant",
@@ -315,7 +325,14 @@ export class bigmodel extends plugin {
 
         // 保存对话记录
         await redis.set(`GLM_chat_log/${e.group_id}_${e.user_id}`, JSON.stringify(msg_log), { EX: 60 * 60 * 24 * 7 }) // 保存到redis，过期时间为7天
-        e.reply(content)
+
+        // 长文本分多句发送
+        content = content.split('\n')
+
+        for (const line of content) {
+            e.reply(line)
+            await sleep(Math.floor(Math.random() * (8000 - 3000 + 1)) + 3000)
+        }
 
         // 统计token用量
         // 今日用量
@@ -431,7 +448,7 @@ export class bigmodel extends plugin {
             return false
         }
         if (e.msg == '#确认覆盖预设文件') {
-            const type = await Download_file('https://oss.xt-url.com/GPT-Config/system_prompt.json', system_prompt_file)
+            const type = await Download_file(model_list.system_prompt_url, system_prompt_file)
             if (type) {
                 e.reply(`配置文件覆盖成功`)
                 return true
@@ -483,7 +500,8 @@ export class bigmodel extends plugin {
             return true
         } else {
             this.finish('set_system_prompt_2')
-            system_prompt = msg
+            // 如果有匹配变量，则替换
+            system_prompt = msg.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
             e.reply(`已创建并应用临时预设：\n${system_prompt}`)
             return true
         }
@@ -582,7 +600,7 @@ export class bigmodel extends plugin {
         e.reply(`已切换模型为：${model_name}`)
         return true
     }
-    
+
     async web_search_set(e) {
         // 只允许主人使用
         if (!e.isMaster) {
@@ -606,22 +624,6 @@ export class bigmodel extends plugin {
 
 // 以下代码在插件载入时执行一次
 
-// 检查配置文件是否存在
-if (!fs.existsSync(system_prompt_file)) {
-    logger.mark(`[${plugin_name}]配置文件不存在，开始下载`)
-    const type = await Download_file('https://oss.xt-url.com/GPT-Config/system_prompt.json', system_prompt_file)
-    if (type) {
-        logger.mark(`[${plugin_name}]配置文件下载成功`)
-    } else {
-        logger.error(`[${plugin_name}]配置文件下载失败`)
-    }
-}
-
-// 设置初始system_prompt
-if (!system_prompt) {
-    system_prompt = await get_default_prompt()
-}
-
 // 检测模型列表文件是否存在
 if (!fs.existsSync(model_list_file)) {
     logger.mark(`[${plugin_name}]模型列表不存在，开始下载`)
@@ -635,6 +637,24 @@ if (!fs.existsSync(model_list_file)) {
 
 // 全局动态变量
 let model_list = await readJsonFile(model_list_file)
+
+// 检查配置文件是否存在
+if (!fs.existsSync(system_prompt_file)) {
+    logger.mark(`[${plugin_name}]配置文件不存在，开始下载`)
+    const type = await Download_file(model_list.system_prompt_url, system_prompt_file)
+    if (type) {
+        logger.mark(`[${plugin_name}]配置文件下载成功`)
+    } else {
+        logger.error(`[${plugin_name}]配置文件下载失败`)
+    }
+}
+
+// 设置初始system_prompt
+if (!system_prompt) {
+    system_prompt = model_list.default_prompt
+}
+system_prompt = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
+
 
 // 每日统计token
 schedule.scheduleJob('0 0 0 * * *', async () => {
