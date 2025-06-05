@@ -252,7 +252,7 @@ export class bigmodel extends plugin {
             // 如果msg_log不存在，初始化msg_log
             msg_log = [{
                 "role": "system",
-                "content": system_prompt
+                "content": system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
             }]
 
         } else {
@@ -273,7 +273,7 @@ export class bigmodel extends plugin {
         }
 
         // 实时修改system_prompt
-        msg_log[0].content = system_prompt
+        msg_log[0].content = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
 
         // 构建请求体
         const data = {
@@ -369,7 +369,6 @@ export class bigmodel extends plugin {
     }
 
     async clear(e) {
-        // if (!e.isMaster) { return false } // 只允许主人使用
         await redis.del(`GLM_chat_log/${e.group_id}_${e.user_id}`)
         e.reply('对话记录已清除')
         return true
@@ -432,9 +431,6 @@ export class bigmodel extends plugin {
                 this.setContext('set_system_prompt_1')
                 return true
             }
-
-            // 如果有匹配变量，则替换
-            system_prompt = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
 
             return true
         } catch (err) {
@@ -516,8 +512,7 @@ export class bigmodel extends plugin {
             return true
         } else {
             this.finish('set_system_prompt_2')
-            // 如果有匹配变量，则替换
-            system_prompt = msg.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
+            system_prompt = msg
             e.reply(`已创建并应用临时预设：\n${system_prompt}`)
             return true
         }
@@ -669,7 +664,6 @@ if (!fs.existsSync(system_prompt_file)) {
 if (!system_prompt) {
     system_prompt = model_list.default_prompt
 }
-system_prompt = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
 
 
 // 每日统计token
