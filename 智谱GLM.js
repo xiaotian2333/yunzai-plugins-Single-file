@@ -206,7 +206,7 @@ export class bigmodel extends plugin {
         msg = msg.replace(' ', '')
 
         // 只有被艾特、私聊、命中机器人名字的消息才会被处理
-        if (!(e.isPrivate || e.atme || e.atBot || msg.includes(Bot.nickname))) {
+        if (!(e.isPrivate || e.atme || e.atBot || msg.includes(this.e.bot.nickname))) {
             return false
         }
 
@@ -252,7 +252,7 @@ export class bigmodel extends plugin {
             // 如果msg_log不存在，初始化msg_log
             msg_log = [{
                 "role": "system",
-                "content": system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
+                "content": system_prompt.replace(/\$\{Bot\.nickname\}/, `${this.e.bot.nickname}`)
             }]
 
         } else {
@@ -273,7 +273,7 @@ export class bigmodel extends plugin {
         }
 
         // 实时修改system_prompt
-        msg_log[0].content = system_prompt.replace(/\$\{Bot\.nickname\}/, `${Bot.nickname}`)
+        msg_log[0].content = system_prompt.replace(/\$\{Bot\.nickname\}/, `${this.e.bot.nickname}`)
 
         // 构建请求体
         const data = {
