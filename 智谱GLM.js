@@ -223,7 +223,7 @@ export class bigmodel extends plugin {
             return false
         }
         // 消息长度限制，正常聊天200字足以，字数开放越多越容易被洗脑
-        if (msg.length > 200) {
+        if (msg.length > 200 && !e.isMaster) {
             e.reply('输入文本长度过长')
             return true
         }
