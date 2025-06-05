@@ -231,6 +231,22 @@ export class bigmodel extends plugin {
         logger.mark(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
         let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
 
+        // 引用历史消息
+        if (typeof e.getReply === 'function') {
+            try {
+                const reply = await e.getReply()
+                // 文本
+                if (reply.message[0].type == 'text') {
+                    msg = `用户引用了此历史消息：${reply.message[0].text}\n消息发送者为${reply.sender.nickname}\n以上消息可能会帮助回答用户问题，但也有可能不关联，以下是用户的输入：\n${msg}`
+                } else {
+                    throw new Error("引用消息不是文本")
+                }
+            }
+            catch (err) {
+                logger.warn(`[${plugin_name}]引用消息获取失败，错误信息：${err}`)
+                msg = `用户尝试引用一个历史消息，但是失败了\n以下是用户的输入：\n${msg}`
+            }
+        }
 
         if (msg_log == 'none') {
             // 如果msg_log不存在，初始化msg_log
@@ -331,7 +347,7 @@ export class bigmodel extends plugin {
 
         for (const line of content) {
             e.reply(line)
-            await sleep(Math.floor(Math.random() * (8000 - 3000 + 1)) + 3000)
+            await sleep(Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000)
         }
 
         // 统计token用量
