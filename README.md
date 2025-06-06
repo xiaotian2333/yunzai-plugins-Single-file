@@ -243,3 +243,7 @@
 ## 开源协议
 
 还没想好用什么开源协议，暂时不添加
+
+## stars 历史
+
+[![stars 历史图表](https://api.star-history.com/svg?repos=xiaotian2333/yunzai-plugins-Single-file&type=Date)](https://star-history.com/#xiaotian2333/yunzai-plugins-Single-file&Date)
