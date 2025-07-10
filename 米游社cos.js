@@ -224,7 +224,7 @@ export class example extends plugin {
       event: 'message',
       priority: 5000,
       rule: [{
-        reg: '^#?cos',
+        reg: /^#?(米游社|mys)?cos$/,
         fnc: 'cos',
         //permission: 'master', // 仅限主人可触发
       }]
