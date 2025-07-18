@@ -36,11 +36,14 @@ export class bili extends plugin {
     }
 
     const msg = [
+      segment.at(e.user_id),
+      `分享了一个B站链接\n`,
       `标题：${bilidata.title}\n`,
       `链接：${bilidata.url}\n`,
       segment.image(bilidata.img),
       `\n原始分享者：${bilidata?.host?.nick}(${bilidata?.host?.uin})`,
     ]
-    e.reply(msg, true)
+    e.reply(msg)
+    e.recall() // 撤回卡片消息
   }
 }
