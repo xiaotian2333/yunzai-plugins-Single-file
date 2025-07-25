@@ -147,8 +147,8 @@ export class bili extends plugin {
     try{
       const airurl = await getRedirectUrl(msg)
 
-      // 接口返回false或链接为无效链接中断
-      if (airurl == false || airurl == "https://b23.tv/") {
+      // 接口返回false、链接无效、会员购的情况，中断
+      if (airurl == false || airurl == "https://b23.tv/" || airurl == "https://mall.bilibili.com/detail.html") {
         return false
       }
 
