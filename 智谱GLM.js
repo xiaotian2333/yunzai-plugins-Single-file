@@ -10,10 +10,10 @@ import schedule from 'node-schedule'
 // 智谱API Key，需要自行申请(需实名)
 // 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
 
-// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版），glm-z1-flash（推理） 模型，其他模型需自行申请）
+// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版），glm-z1-flash（推理），glm-4.5-flash（4.5系列） 模型，其他模型需自行申请）
 const Authorization = "" //智谱API Key
 const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
-let model = "glm-4-flash-250414" //模型名称
+let model = "glm-4.5-flash" //模型名称
 let web_search = false //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
 const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
 const max_log = 10 //最大历史记录数
@@ -114,12 +114,35 @@ async function Download_file(url, path) {
     }
 }
 
-// 获取默认系统提示词
-async function get_default_prompt() {
-    const system_prompt_list = readJsonFile(system_prompt_file)
-    Object.keys(system_prompt_list).forEach(key => {
-        return system_prompt_list[key]
-    })
+// 重新读取配置文件
+async function read_config() {
+    try {
+        system_prompt_list = await readJsonFile(system_prompt_file)
+        model_list = await readJsonFile(model_list_file)
+        return false
+    } catch (err) {
+        logger.error(`[${plugin_name}]读取或解析JSON文件时出错:`, err.message)
+        return `读取或解析JSON文件时出错: \n${err.message}`
+    }
+}
+
+// 动态变量实时替换
+function replace_var(str,nickname) {
+    const date = new Date(Date.now())
+
+    // 年月日
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0') // 月份从0开始，需要加1，并确保是两位数
+    const day = String(date.getDate()).padStart(2, '0')
+    // 时分秒
+    const hour = String(date.getHours()).padStart(2, '0')
+    const minute = String(date.getMinutes()).padStart(2, '0')
+    const second = String(date.getSeconds()).padStart(2, '0')
+
+    str = str.replace(/\$\{Bot\.nickname\}/, `${nickname}`)
+    str = str.replace(/\$\{now_date\}/, `${year}年${month}月${day}日`)
+    str = str.replace(/\$\{now_time\}/, `${hour}时${minute}分${second}秒`)
+    return str
 }
 
 /** 时间戳转可视化日期函数
@@ -252,7 +275,7 @@ export class bigmodel extends plugin {
             // 如果msg_log不存在，初始化msg_log
             msg_log = [{
                 "role": "system",
-                "content": system_prompt.replace(/\$\{Bot\.nickname\}/, `${this.e.bot.nickname}`)
+                "content": system_prompt
             }]
 
         } else {
@@ -273,7 +296,7 @@ export class bigmodel extends plugin {
         }
 
         // 实时修改system_prompt
-        msg_log[0].content = system_prompt.replace(/\$\{Bot\.nickname\}/, `${this.e.bot.nickname}`)
+        msg_log[0].content = replace_var(system_prompt,this.e.bot.nickname)
 
         // 构建请求体
         const data = {
@@ -375,23 +398,26 @@ export class bigmodel extends plugin {
     }
 
     async role_list(e) {
-        try {
-            const system_prompt_list = readJsonFile(system_prompt_file)
-
-            let name_list = ["可切换的角色身份\n"]
-
-            Object.keys(system_prompt_list).forEach(key => {
-                //console.log(`name: ${key}, key: ${system_prompt_list[key]}`)
-                name_list.push(`${key}\n`)
-            })
-
-            e.reply(name_list)
-            return true
-
-        } catch (err) {
-            logger.error(`[${plugin_name}]读取或解析JSON文件时出错:`, err.message)
-            e.reply(`读取或解析JSON文件时出错: \n${err.message}`)
+        // 刷新配置文件
+        const err = await read_config()
+        if (err) {
+            e.reply(err)
+            return false
         }
+
+        let name_list = ["可切换的角色身份\n"]
+
+        Object.keys(system_prompt_list).forEach(key => {
+            //console.log(`name: ${key}, key: ${system_prompt_list[key]}`)
+            // 如果key为system_prompt则跳过本次循环
+            if (key == 'system_prompt') {
+                return
+            }
+            name_list.push(`${key}\n`)
+        })
+
+        e.reply(name_list)
+        return true
     }
 
     async role(e) {
@@ -408,36 +434,35 @@ export class bigmodel extends plugin {
             return false
         }
 
-        try {
-            const system_prompt_list = readJsonFile(system_prompt_file)
-
-            // 标记是否找到匹配的角色
-            let type = false
-
-            // 遍历人物设定
-            Object.keys(system_prompt_list).forEach(key => {
-                //console.log(`name: ${key}, key: ${system_prompt_list[key]}`)
-                if (key == name) {
-                    system_prompt = system_prompt_list[key]
-                    type = true
-                }
-            })
-
-            // 判断是否找到匹配的角色设定
-            if (type) {
-                e.reply(`人物设定已切换为${name}`)
-            } else {
-                e.reply(`人物设定${name}不存在，想要创建一个临时预设吗\n\n发送 #创建临时预设 进行创建`)
-                this.setContext('set_system_prompt_1')
-                return true
-            }
-
-            return true
-        } catch (err) {
-            logger.error(`[${plugin_name}]读取或解析JSON文件时出错:`, err.message)
-            e.reply(`读取或解析JSON文件时出错: \n${err.message}`)
+        // 刷新配置文件
+        const err = await read_config()
+        if (err) {
+            e.reply(err)
             return false
         }
+
+        // 标记是否找到匹配的角色
+        let type = false
+
+        // 遍历人物设定
+        Object.keys(system_prompt_list).forEach(key => {
+            //console.log(`name: ${key}, key: ${system_prompt_list[key]}`)
+            if (key == name) {
+                system_prompt = system_prompt_list.system_prompt + system_prompt_list[key]
+                type = true
+            }
+        })
+
+        // 判断是否找到匹配的角色设定
+        if (type) {
+            e.reply(`人物设定已切换为${name}`)
+        } else {
+            e.reply(`人物设定${name}不存在，想要创建一个临时预设吗\n\n发送 #创建临时预设 进行创建`)
+            this.setContext('set_system_prompt_1')
+            return true
+        }
+
+        return true
     }
 
     async pull_1(e) {
@@ -646,7 +671,7 @@ if (!fs.existsSync(model_list_file)) {
     }
 }
 
-// 全局动态变量
+// 全局动态变量model_list
 let model_list = await readJsonFile(model_list_file)
 
 // 检查配置文件是否存在
@@ -660,9 +685,12 @@ if (!fs.existsSync(system_prompt_file)) {
     }
 }
 
+// 动态全局变量system_prompt_list
+let system_prompt_list = await readJsonFile(system_prompt_file)
+
 // 设置初始system_prompt
 if (!system_prompt) {
-    system_prompt = model_list.default_prompt
+    system_prompt = system_prompt_list.system_prompt + model_list.default_prompt
 }
 
 
