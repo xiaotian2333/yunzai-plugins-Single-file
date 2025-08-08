@@ -1,4 +1,4 @@
-# <center>云崽轻量级插件</center>
+<h1><center>云崽轻量级插件</center></h1>
 
 ## 关于喵崽兼容性的相关说明
 
@@ -241,7 +241,7 @@
 
 ---
 
-## <center>非常规插件</center>
+<h2><center>非常规插件</center></h2>
 
 此类插件仅供参考使用
 
