@@ -239,6 +239,16 @@
 
 获取三角洲每日行动门密码
 
+### 自动优选签名IP
+
+用于签名域名为CDN的情况  
+自动优选签名IP，根据延迟测试结果自动切换签名IP并写入hosts文件  
+
+#### 注意
+
+由于hosts文件权限问题，需要以root权限（linux）或Administrator权限（windows）运行云崽  
+否则无法写入hosts文件  
+
 ---
 
 <h2><center>非常规插件</center></h2>
