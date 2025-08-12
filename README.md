@@ -185,6 +185,7 @@
 | search_engine | search_std | 使用哪个搜索引擎，可配置项参考[这里](https://www.bigmodel.cn/pricing) |
 | max_log | 10 | 聊天记忆深度，建议范围5~20 |
 | think_print | false | 支持思考的模型是否输出思考过程 |
+| on_thinking | true | 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链 |
 | system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 

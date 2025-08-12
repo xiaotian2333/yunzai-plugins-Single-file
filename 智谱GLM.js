@@ -19,6 +19,8 @@ const search_engine = "search_std" //搜索引擎名称，参考：https://www.b
 const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
 const think_print = false //支持思考的模型是否输出思考过程
+const on_thinking = true //仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链。
+
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
@@ -53,16 +55,16 @@ function readJsonFile(path) {
 
 
 // 生成32位随机字符串
-let res
+let Random_device_ID
 function randomString() {
-    if (res) { return res }
+    if (Random_device_ID) { return Random_device_ID }
     let str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     for (let i = 0; i < 32; i++) {
         let id = Math.ceil(Math.random() * str.length)
-        res += str.charAt(id)
+        Random_device_ID += str.charAt(id)
     }
-    logger.debug(`[${plugin_name}]生成新的设备ID：${res}`)
-    return res
+    logger.debug(`[${plugin_name}]生成新的设备ID：${Random_device_ID}`)
+    return Random_device_ID
 }
 
 // 获取Token
@@ -127,7 +129,7 @@ async function read_config() {
 }
 
 // 动态变量实时替换
-function replace_var(str,nickname) {
+function replace_var(str, nickname) {
     const date = new Date(Date.now())
 
     // 年月日
@@ -296,7 +298,7 @@ export class bigmodel extends plugin {
         }
 
         // 实时修改system_prompt
-        msg_log[0].content = replace_var(system_prompt,this.e.bot.nickname)
+        msg_log[0].content = replace_var(system_prompt, this.e.bot.nickname)
 
         // 构建请求体
         const data = {
@@ -312,14 +314,15 @@ export class bigmodel extends plugin {
                     "enable": web_search,
                     "search_engine": search_engine,  // 选择搜索引擎类型
                 }
-            }]
+            }],
+            "thinking": on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
         }
         // 网络请求
         let Reply = await fetch(url, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": await get_token(),
+                "Authorization": Authorization || await get_token(),
                 "User-Agent": "GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
             },
             body: JSON.stringify(data)
@@ -334,24 +337,34 @@ export class bigmodel extends plugin {
         let content = Reply.choices[0].message.content
 
         // 过滤思考过程
-        if (content.startsWith('\n<think>') || content.startsWith('<think>')) {
-            // 检测到有思考过程
+        let think_text = ''
+        // 标准思考处理
+        if (Reply.choices[0]?.reasoning_content) {
             logger.debug(`[${plugin_name}]检测到有思考过程`)
+            think_text = Reply.choices[0].reasoning_content
+        }
+        // 兼容早期思考输出
+        else if (content.startsWith('\n<think>') || content.startsWith('<think>')) {
 
-            let think_text = content.split('</think>')
+            logger.debug(`[${plugin_name}]检测到有思考过程`)
+            // 处理think标签
+            think_text = content.split('</think>')
             think_text[0] = think_text[0].replace('<think>', '').trim()
+            // 过滤思考过程
             content = think_text[1].trim()
+            think_text = think_text[0]
+        }
 
-            if (think_print) {
-                logger.debug(`[${plugin_name}]用户开启了发送思考过程`)
-                // 发送思考过程
-                let msgList = [{
-                    user_id: 2854200865,
-                    nickname: '思考过程',
-                    message: think_text[0]
-                }]
-                await e.reply(await Bot.makeForwardMsg(msgList))
-            }
+        // 如果用户开启思考发送且think_text不为空，则发送思考过程
+        if (think_print && think_text) {
+            logger.debug(`[${plugin_name}]用户开启了发送思考过程`)
+            // 发送思考过程
+            let msgList = [{
+                user_id: 2854200865,
+                nickname: '思考过程',
+                message: think_text
+            }]
+            await e.reply(await Bot.makeForwardMsg(msgList))
         }
 
         content = content.trim()
@@ -554,11 +567,14 @@ export class bigmodel extends plugin {
         // 构建信息
         const msg = [
             `=====${plugin_name}当前状态=====\n`,
+            `密钥状态：${Authorization ? '已配置' : '未配置'}\n`,
             `今日token消耗：${token_today}\n`,
             `累计token消耗：${token_history}\n`,
             `当前模型：${model}\n`,
             `数据版本：${model_list.version}\n`,
             `联网能力：${web_search ? '开启' : '关闭'}\n`,
+            `思考能力：${on_thinking ? '开启' : '关闭'}\n`,
+            `思考输出：${think_print ? '开启' : '关闭'}\n`,
             `=====================\n`,
             `Tip：${tips}`
 
