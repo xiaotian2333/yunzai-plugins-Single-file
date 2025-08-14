@@ -315,7 +315,9 @@ export class bigmodel extends plugin {
                     "search_engine": search_engine,  // 选择搜索引擎类型
                 }
             }],
-            "thinking": on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
+            "thinking": {
+                type: on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
+            }            
         }
         // 网络请求
         let Reply = await fetch(url, {
@@ -328,9 +330,15 @@ export class bigmodel extends plugin {
             body: JSON.stringify(data)
         })
         Reply = await Reply.json()
+
         // 错误处理
         if (Reply.error) {
-            e.reply(`发生错误：\n${Reply.error.message}`)
+            e.reply(`[${plugin_name}]发生错误，响应码[${Reply.code || "无"}]\n来自API的错误信息：\n${Reply?.error?.message || Reply?.msg || "没有来自API的错误信息"}`)
+            return false
+        }
+        // 检查choices是否存在
+        if (!Reply?.choices || !Reply?.choices[0]) {
+            e.reply(`[${plugin_name}]API返回格式错误：缺少回复数据`)
             return false
         }
         // 获取回复内容
