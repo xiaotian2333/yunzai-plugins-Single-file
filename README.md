@@ -186,10 +186,13 @@
 | max_log | 10 | 聊天记忆深度，建议范围5~20 |
 | think_print | false | 支持思考的模型是否输出思考过程 |
 | on_thinking | true | 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链 |
+| vision_enable | false | 是否开启多模态能力 |
+| vision_model | glm-4.1v-thinking-flash | 多模态模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 
-> 从2025年6月1日0点起，联网功能收费单价为0.01元/次起，因此改为默认关闭
+> 从2025年6月1日0点起，联网功能收费单价为0.01元/次起，因此改为默认关闭  
+> 此处会隐藏一些一般不用调整的高级配置项，如需要调整请自行修改源码内相关配置  
 
 ### 智谱绘图
 

@@ -21,6 +21,13 @@ const plugin_name = "智谱GLM" //插件名称
 const think_print = false //支持思考的模型是否输出思考过程
 const on_thinking = true //仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链。
 
+// 多模态相关配置，需配置key才可使用
+let vision_enable = false //是否开启多模态
+const vision_model = "glm-4.1v-thinking-flash" //多模态模型名称，参考：https://www.bigmodel.cn/pricing
+const version_do_sample = true //是否启用采样策略来生成文本。默认值为 true。对于需要一致性和可重复性的任务（如代码生成、翻译），建议设置为 false。
+const version_top_p = "0.6" // 不懂勿动
+const version_temperature = "0.8" // 不懂勿动
+
 
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
@@ -172,6 +179,58 @@ function sleep(time) {
     return new Promise((resolve) => setTimeout(resolve, time))
 }
 
+/**
+ * 获取用户引用的消息
+ * @param {Object} getReply - 引用消息对象
+ * @return {list<object>} - 返回引用的消息内容
+ */
+async function get_quote_message(getReply) {
+    if (typeof getReply === 'function') {
+        try {
+            const reply = await getReply()
+            if (reply.message) {
+                return reply.message
+            }
+        }
+        catch (err) {
+            logger.warn(`[${plugin_name}]引用消息获取失败，错误信息：${err}`)
+            return false
+        }
+    }
+}
+/**
+ * 将消息列表拆分并分类
+ * @param {list} message 
+ */
+function split_message(message) {
+    // 多模态相关信息初始化
+    let text_list = []
+    let image_list = []
+    let isVision = false // 是否激活多模态处理
+
+    // 拆分消息
+    for (let i = 0; i < message.length; i++) {
+        let element = message[i]
+
+        // 分类
+        if (element.type === "text") {
+            // 文字
+            text_list.push(element.text)
+
+        } else if (element.type === "image") {
+            // 图片
+            image_list.push(element.url)
+            isVision = true
+
+        }
+    }
+    return {
+        text_list,
+        image_list,
+        isVision
+    }
+}
+
 export class bigmodel extends plugin {
     constructor() {
         super({
@@ -252,27 +311,76 @@ export class bigmodel extends plugin {
             e.reply('输入文本长度过长')
             return true
         }
-
-        logger.mark(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
-        let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
-
-        // 引用历史消息
-        if (typeof e.getReply === 'function') {
-            try {
-                const reply = await e.getReply()
-                // 文本
-                if (reply.message[0].type == 'text') {
-                    msg = `用户引用了此历史消息：${reply.message[0].text}\n消息发送者为${reply.sender.nickname}\n以上消息可能会帮助回答用户问题，但也有可能不关联，以下是用户的输入：\n${msg}`
-                } else {
-                    throw new Error("引用消息不是文本")
-                }
-            }
-            catch (err) {
-                logger.warn(`[${plugin_name}]引用消息获取失败，错误信息：${err}`)
-                msg = `用户尝试引用一个历史消息，但是失败了\n以下是用户的输入：\n${msg}`
-            }
+        // 多模态能力判断
+        if (!Authorization && vision_enable) {
+            logger.warn(`[${plugin_name}]未配置key，无法使用多模态能力`)
+            vision_enable = false
         }
 
+        logger.mark(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
+
+        // 多模态相关信息初始化
+        let text_list = [] // 历史文本列表
+        let image_list = [] // 图片列表，存储url
+        let isVision = false // 是否激活多模态处理
+        let backup_msg = '' // 备份消息，用于多模态处理时，防止单模特模型无法处理多模态内容
+
+
+        // 引用历史消息
+        let quote_message = await get_quote_message(e?.getReply)
+
+        // 存在历史消息
+        if (quote_message) {
+            quote_message = split_message(quote_message)
+
+
+            text_list.push(...quote_message.text_list)
+            image_list.push(...quote_message.image_list)
+            isVision = quote_message.isVision // 如引用的消息包含图片等多模态内容则开启多模态处理
+        }
+
+        // 判断用户消息是否有图片
+        let user_message = split_message(e.message)
+        if (user_message.isVision) {
+            image_list.push(...user_message.image_list)
+            isVision = isVision || user_message.isVision // 如用户消息包含图片等多模态内容则开启多模态处理，如本身已激活则保持激活
+        }
+
+        // 判断引用的消息是否有图片
+        if (isVision && vision_enable) {
+            // 多模态处理
+            let version_msg = []
+            for (let i = 0; i < image_list.length; i++) {
+                version_msg.push({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_list[i]
+                    }
+                })
+            }
+
+            // 添加引导词
+            if (text_list.length > 0) {
+                version_msg.push({
+                    "type": "text",
+                    "text": `用户引用了一些图片和历史消息，这些图片和历史消息大概率会帮助回答用户问题，但也有小概率不关联。历史消息内容如下：\n${text_list.join('\n')}\n以下是用户的输入：\n${msg}`
+                })
+            } else {
+                version_msg.push({
+                    "type": "text",
+                    "text": `用户引用了一些图片，图片大概率会帮助回答用户问题，但也有小概率不关联，以下是用户的输入：\n${msg}`
+                })
+            }
+            // 创建文本模型兼容消息，作为放入redis的历史消息存储
+            backup_msg = `用户引用了一些图片，已由其他模型处理并回答，如用户询问请根据上下文回答用户问题，以下是用户引用图片时的输入：\n${msg}`
+
+            msg = version_msg
+        } else if (text_list > 0) {
+            // 没有激活多模态处理，但引用了消息
+            msg = `用户引用了这些历史消息：${text_list.join('\n')}\n以上消息可能会帮助回答用户问题，但也有可能不关联，以下是用户的输入：\n${msg}`
+        }
+
+        let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
         if (msg_log == 'none') {
             // 如果msg_log不存在，初始化msg_log
             msg_log = [{
@@ -286,6 +394,8 @@ export class bigmodel extends plugin {
             msg_log = JSON.parse(msg_log)
         }
         // 添加聊天信息
+        const backup_msg_log = [...msg_log]
+
         msg_log.push({
             "role": "user",
             "content": msg
@@ -300,25 +410,51 @@ export class bigmodel extends plugin {
         // 实时修改system_prompt
         msg_log[0].content = replace_var(system_prompt, this.e.bot.nickname)
 
+        let data = {}
         // 构建请求体
-        const data = {
-            "model": model,
-            "messages": msg_log,
-            "do_sample": "true",
-            "temperature": "0.8", // 温度，0.8是默认值，可以调整
-            "stream": "false",
-            "user_id": `${e.group_id}_${e.user_id}`,
-            "tools": [{
-                "type": "web_search",
-                "web_search": {
-                    "enable": web_search,
-                    "search_engine": search_engine,  // 选择搜索引擎类型
+        if (isVision && vision_enable) {
+            // 多模态处理
+            logger.debug(`[${plugin_name}]进入多模态处理，构建多模态请求`)
+            data = {
+                "model": vision_model,
+                "messages": msg_log,
+                "do_sample": version_do_sample,
+                "temperature": version_temperature,
+                "top_p": version_top_p,
+                "stream": "false",
+                "user_id": `${e.group_id}_${e.user_id}`,
+                "tools": [{
+                    "type": "web_search",
+                    "web_search": {
+                        "enable": web_search,
+                        "search_engine": search_engine,  // 选择搜索引擎类型
+                    }
+                }],
+            }
+        } else {
+            // 单模态处理
+            logger.debug(`[${plugin_name}]未激活多模态处理，构建文本请求`)
+            data = {
+                "model": model,
+                "messages": msg_log,
+                "do_sample": "true",
+                "temperature": "0.8", // 温度，0.8是默认值，可以调整
+                "stream": "false",
+                "user_id": `${e.group_id}_${e.user_id}`,
+                "tools": [{
+                    "type": "web_search",
+                    "web_search": {
+                        "enable": web_search,
+                        "search_engine": search_engine,  // 选择搜索引擎类型
+                    }
+                }],
+                "thinking": {
+                    type: on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
                 }
-            }],
-            "thinking": {
-                type: on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
-            }            
+            }
         }
+
+
         // 网络请求
         let Reply = await fetch(url, {
             method: 'POST',
@@ -377,12 +513,35 @@ export class bigmodel extends plugin {
 
         content = content.trim()
 
-        // 添加到对话记录
-        msg_log.push({
-            "role": "assistant",
-            "content": content
-        })
+        // 为兼容文本模型，多模态处理的消息存储为普通格式
+        if (isVision && vision_enable) {
+            // 多模态处理
+            msg_log = backup_msg_log
 
+            // 添加用户消息
+            msg_log.push({
+                "role": "user",
+                "content": backup_msg
+            })
+
+            // 限制聊天记录长度
+            if (msg_log.length > max_log) {
+                // 删除除system_prompt之外的最旧记录
+                msg_log.splice(1, 1)
+            }
+
+            // 添加模型的回答
+            msg_log.push({
+                "role": "assistant",
+                "content": content
+            })
+        } else {
+            // 纯文本处理
+            msg_log.push({
+                "role": "assistant",
+                "content": content
+            })
+        }
         // 保存对话记录
         await redis.set(`GLM_chat_log/${e.group_id}_${e.user_id}`, JSON.stringify(msg_log), { EX: 60 * 60 * 24 * 7 }) // 保存到redis，过期时间为7天
 
@@ -583,6 +742,7 @@ export class bigmodel extends plugin {
             `联网能力：${web_search ? '开启' : '关闭'}\n`,
             `思考能力：${on_thinking ? '开启' : '关闭'}\n`,
             `思考输出：${think_print ? '开启' : '关闭'}\n`,
+            `多模态能力：${vision_enable ? '开启' : '关闭'}\n`,
             `=====================\n`,
             `Tip：${tips}`
 
@@ -716,6 +876,13 @@ let system_prompt_list = await readJsonFile(system_prompt_file)
 if (!system_prompt) {
     system_prompt = system_prompt_list.system_prompt + model_list.default_prompt
 }
+
+// 多模态能力判断
+if (!Authorization) {
+    logger.warn(`[${plugin_name}]未配置key，无法使用多模态能力`)
+    vision_enable = false
+}
+
 
 
 // 每日统计token
