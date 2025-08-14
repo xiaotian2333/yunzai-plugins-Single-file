@@ -469,7 +469,13 @@ export class bigmodel extends plugin {
 
         // 错误处理
         if (Reply.error) {
-            e.reply(`[${plugin_name}]发生错误，响应码[${Reply.code || "无"}]\n来自API的错误信息：\n${Reply?.error?.message || Reply?.msg || "没有来自API的错误信息"}`)
+            if (Reply.error.code == "1210") {
+                e.reply(`暂不支持gif或尺寸过小的图片识别`)
+                logger.error(`[${plugin_name}]发生错误，响应码[${Reply.error.code}]\n来自API的错误信息：\n${Reply?.error?.message || Reply?.msg || "没有来自API的错误信息"}`)
+                logger.error(`[${plugin_name}]此错误通常由图片尺寸过小或gif图片导致，如图片链接无法被智谱访问也会产生此报错`)
+                return false
+            }
+            e.reply(`[${plugin_name}]发生错误，响应码[${Reply.code || Reply.error.code || "无"}]\n来自API的错误信息：\n${Reply?.error?.message || Reply?.msg || "没有来自API的错误信息"}`)
             return false
         }
         // 检查choices是否存在
@@ -483,9 +489,9 @@ export class bigmodel extends plugin {
         // 过滤思考过程
         let think_text = ''
         // 标准思考处理
-        if (Reply.choices[0]?.reasoning_content) {
+        if (Reply.choices[0].message?.reasoning_content) {
             logger.debug(`[${plugin_name}]检测到有思考过程`)
-            think_text = Reply.choices[0].reasoning_content
+            think_text = Reply.choices[0].message?.reasoning_content
         }
         // 兼容早期思考输出
         else if (content.startsWith('\n<think>') || content.startsWith('<think>')) {
