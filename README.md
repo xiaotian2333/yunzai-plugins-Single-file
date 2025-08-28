@@ -253,6 +253,22 @@
 由于hosts文件权限问题，需要以root权限（linux）或Administrator权限（windows）运行云崽  
 否则无法写入hosts文件  
 
+### 手办化
+
+将图片转换为手办化的图片
+
+> 需自行配置key或token，没有可进群获取
+
+使用 `#手办化` `#手办` 等指令即可将图片转换为手办化的图片
+
+#### 安装依赖
+
+使用前需要安装依赖  
+
+``` bash
+cd plugins/example && pnpm add axios
+```
+
 ---
 
 <h2><center>非常规插件</center></h2>
