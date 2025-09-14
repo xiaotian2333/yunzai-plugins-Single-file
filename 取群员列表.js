@@ -14,7 +14,7 @@ export class getlist extends plugin {
                   event: "message",
                   priority: 5000,
                   rule: [{
-                        reg: /^#?(取|导出)群员列表(\d{5,12})?$/,
+                        reg: /^#?(取|导出)群(员|友)列表(\d{5,12})?$/,
                         fnc: "getlist"
                   }]
             })
@@ -22,7 +22,7 @@ export class getlist extends plugin {
 
       async getlist(e) {
             // 检查消息内容是否包含5到12位的数字
-            const match = e.msg.match(/^#?(取|导出)群员列表(\d{5,12})$/)
+            const match = e.msg.match(/^#?(取|导出)群(员|友)列表(\d{5,12})?$/)
             let group_id
 
             // 检查是否匹配到群号
