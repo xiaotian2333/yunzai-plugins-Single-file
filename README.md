@@ -271,6 +271,14 @@
 cd plugins/example && pnpm add axios
 ```
 
+### ICP查询
+
+查询域名有无备案
+
+发送 `#备案查询<域名>` 即可查询域名是否备案
+
+> 感谢[二叉树树](https://2x.nz/posts/auto-icp-query/)提供的接口
+
 ---
 
 <h2><center>非常规插件</center></h2>
