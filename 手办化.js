@@ -3,7 +3,9 @@
 
 import axios from 'axios'
 
-const API_KEY = "" // 填入你的key或token，如没有可加群获取token
+// 填入你的智谱key或token，如没有可加群获取token
+// 收费标准为按调用次数后付费，0.06 元/次
+const API_KEY = ""
 
 const prompt = "Using the nano-banana model, a commercial 1/7 scale figurine of the character in the picture was created, depicting a realistic style and a realistic environment. The figurine is placed on a computer desk with a round transparent acrylic base. There is no text on the base. The computer screen shows the Zbrush modeling process of the figurine. Next to the computer screen is a BANDAI-style toy box with the original painting printed on it. Please turn this photo into a figure. Behind it, there should be a partially transparent plastic paper box with the character from this photo printed on it. In front of the box, on a round plastic base, place the figure version of the photo I gave you. I'd like the PVC material to be clearly represented. It would be even better if the background is indoors"
 
