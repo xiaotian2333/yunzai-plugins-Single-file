@@ -89,7 +89,7 @@ export class icp extends plugin {
             priority: 5000,
             rule: [
                 {
-                    reg: /^#?(ICP|icp|备案)?查询/,
+                    reg: /^#?(ICP|icp|备案)?(强制)?查询/,
                     fnc: 'icp'
                 }
             ]
@@ -98,8 +98,14 @@ export class icp extends plugin {
 
     async icp(e) {
         let domain = e.msg
-        domain = await domain.replace(/^#?(ICP|icp|备案)?查询/, '')
-        domain = extractMainDomain(domain)
+        domain = await domain.replace(/^#?(ICP|icp|备案)?(强制)?查询/, '')
+        // 常规查询
+        if (e.msg.includes('强制')) {
+            logger.debug(`域名[${domain}]触发强制查询`)
+        } else {
+            domain = extractMainDomain(domain)
+        }
+
         const url = `https://icp.2x.nz/?domain=${domain}`  // 感谢二叉树树提供的接口
         let res = await fetch(url, {
             method: 'GET',
@@ -123,7 +129,7 @@ export class icp extends plugin {
         let msg = [
             `域名：${domain}`,
             `${icp.natureName}备案：${icp.unitName}`,
-            `备案号：${icp.mainLicence}`, 
+            `备案号：${icp.serviceLicence}`,
         ]
         msg = msg.join("\n")
         e.reply(msg, true)
