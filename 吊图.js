@@ -293,13 +293,16 @@ export class example extends plugin {
         {
           reg: /^#?(吊|叼|屌|铞)图查看图片/,
           fnc: 'view'
+        },
+        {
+          reg: /^#?(吊|叼|屌|铞)图状态/,
+          fnc: 'status'
         }
       ]
     })
-    // 创建定时任务 这个是云崽提供的内置方法，暂无使用的考虑
     this.task = {
       cron: '0 0 0 * * *',
-      name: '定时点赞',
+      name: '定时重置冷却',
       fnc: () => Reset_cd(), // 指触发的函数
       log: false // 是否输出日志
     }
@@ -403,6 +406,22 @@ export class example extends plugin {
     let imgBuffer = await fs.readFile(filePath)
     imgBuffer = await convertToJpg(imgBuffer)
     e.reply(segment.image(imgBuffer))
+    return true
+  }
+
+  async status(e) {
+    let version = img_data.version
+    if (version === "0.0.0") {
+      version = "未启用云图库"
+    }
+
+    const msg = [
+      `------吊图状态------`,
+      `本地图片数量: ${img_data.local_img_list.length}`,
+      `网络图片数量: ${img_data.img_list.length}`,
+      `云图库版本: ${version}`
+    ]
+    e.reply(msg.join('\n'))
     return true
   }
 }
