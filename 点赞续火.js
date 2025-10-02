@@ -28,15 +28,28 @@ const hitokoto_api = 'https://v1.hitokoto.cn/?encode=text&charset=utf-8&c=d&c=i&
 /** 一言默认文案，网络请求失败时发送这个 */
 const hitokoto_Default_text = '种自己的花，爱自己的宇宙🌍'
 
+/** 冷却相关配置 */
+const cd = 1 // 一天只能触发1次
+const cd_tips = "点过就别继续发了，还搁这讨赞呢？你是乞丐吗？😏" // 冷却提示
+let user_cd = {} // 初始化冷却数据
+
 
 async function getHitokoto() {
   try {
-  let res = await fetch(hitokoto_api)
-  return res.text()
+    let res = await fetch(hitokoto_api)
+    return res.text()
   } catch (e) {
     logger.warn(`[点赞续火][续火] 接口请求失败，使用默认文案。报错详情：${e}`)
     return hitokoto_Default_text
   }
+}
+
+/**
+ * 重置冷却数据
+ */
+function Reset_cd() {
+  user_cd = {}
+  logger.mark(`[点赞续火][赞我] 冷却已重置`)
 }
 
 /** 被消息触发 */
@@ -57,18 +70,28 @@ export class dzxh extends plugin {
           fnc: "hitokoto",
         }
       ],
-    })
-    /** 创建定时任务 这个是云崽提供的内置方法，暂无使用的考虑
+    }),
     this.task = {
-      cron: '30 5 12 * * *',
-      name: '定时点赞',
-      fnc: () => this.thumbsUpMe(), // 指触发的函数
+      cron: '0 0 0 * * *',
+      name: '定时重置冷却',
+      fnc: () => Reset_cd(), // 指触发的函数
       log: false // 是否输出日志
     }
-    */
   }
   /** 赞我 */
-  async thumbsUpMe() {
+  async thumbsUpMe(e) {
+    // 字段不存在则默认0，存在则保留原值
+    user_cd[e.user_id] = user_cd[e.user_id] ?? 0
+
+    // 冲过头了
+    if (user_cd[e.user_id] >= cd) {
+      e.reply(cd_tips)
+      return true
+    }
+
+    // 加入冷却
+    user_cd[e.user_id] += 1
+
     Bot.pickFriend(this.e.user_id).thumbUp(thumbsUpMe_sum)
     this.e.reply(thumbsUpMe_msg)
     return true
@@ -96,7 +119,7 @@ function sleep(time) {
  * 只选小时就可以了
 */
 schedule.scheduleJob('30 5 12 * * *', async () => {
-//schedule.scheduleJob('1 * * * * *', async () => {
+  //schedule.scheduleJob('1 * * * * *', async () => {
   for (let qq of Object.keys(thumbsUpMelist)) {
     Bot.pickFriend(qq).thumbUp(thumbsUpMe_sum)
     logger.mark(`[点赞续火][自动点赞] 已给QQ${qq}点赞${thumbsUpMe_sum}次`)
@@ -109,7 +132,7 @@ schedule.scheduleJob('30 5 12 * * *', async () => {
 
 // 主动触发-续火
 schedule.scheduleJob('30 15 12 * * *', async () => {
-//schedule.scheduleJob('1 * * * * *', async () => {
+  //schedule.scheduleJob('1 * * * * *', async () => {
   logger.mark(`[点赞续火][自动续火] 触发一言定时`)
   let msg = await getHitokoto()
 
