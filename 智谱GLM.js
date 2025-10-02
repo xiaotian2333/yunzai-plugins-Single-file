@@ -239,11 +239,11 @@ export class bigmodel extends plugin {
             priority: 9000,
             rule: [
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)/,
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)$/,
                     fnc: 'clear',
                 },
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(角色|身份|人物|设定|提示词|预设|人格)列表/,
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(角色|身份|人物|设定|提示词|预设|人格)列表$/,
                     fnc: 'role_list',
                 },
                 {
@@ -267,8 +267,12 @@ export class bigmodel extends plugin {
                     fnc: 'model_set',
                 },
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(开启|打开|关闭|取消)(联网|搜索|网络)/,
+                    reg: /^#(智谱|[Gg][Ll][Mm])?(开启|打开|关闭|取消)(联网|搜索|网络)$/,
                     fnc: 'web_search_set',
+                },
+                {
+                    reg: /^#(智谱|[Gg][Ll][Mm])(查询)?(余额|钱包|金额|消费|财务)$/,
+                    fnc: 'balance',
                 },
                 {
                     reg: '',
@@ -844,6 +848,52 @@ export class bigmodel extends plugin {
             e.reply(`已关闭联网功能`)
         }
 
+        return true
+    }
+
+    async balance(e) {
+        // 只允许主人使用
+        if (!e.isMaster) {
+            e.reply('只有主人才能查询余额')
+            return false
+        }
+
+        // 仅在配置了密钥时才查询余额
+        if (!Authorization) {
+            e.reply('没有配置密钥，无法查询余额')
+            return false
+        }
+
+        // 查询余额
+        let balance = await fetch("https://www.bigmodel.cn/api/biz/account/query-customer-account-report", {
+            method: 'GET',
+            headers: {
+                'Authorization': Authorization,
+                'Content-Type': 'application/json'
+            }
+        })
+        balance = await balance.json()
+        if (!balance.success) {
+            e.reply('查询余额失败，请检查密钥是否正确')
+            return false
+        }
+        balance = balance.data
+
+        // 构建信息
+        const msg = [
+            `=====${plugin_name}财务总览=====\n`,
+            `当前余额：${balance.balance}\n`,
+            `累计充值：${balance.rechargeAmount}\n`,
+            `赠送金额：${balance.giveAmount}\n`,
+            `=====================\n`,
+            `累计消费：${balance.totalSpendAmount}\n`,
+            `冻结余额：${balance.frozenBalance}\n`,
+            `可用余额：${balance.availableBalance}\n`,
+            `=====================\n`
+        ]
+
+        // 发送信息
+        e.reply(msg)
         return true
     }
 }
