@@ -83,9 +83,16 @@ export class dzxh extends plugin {
     // 字段不存在则默认0，存在则保留原值
     user_cd[e.user_id] = user_cd[e.user_id] ?? 0
 
-    // 冲过头了
-    if (user_cd[e.user_id] >= cd) {
+    // 二次触发
+    if (user_cd[e.user_id] == cd) {
       e.reply(cd_tips)
+      user_cd[e.user_id] += 1
+      return true
+    }
+
+    // 多次触发，不再回复消息
+    if (user_cd[e.user_id] > cd) {
+      user_cd[e.user_id] += 1
       return true
     }
 
