@@ -7,7 +7,7 @@ import fetch from "node-fetch"
 import fs from "fs"
 import schedule from 'node-schedule'
 
-// 智谱API Key，需要自行申请(需实名)
+// 智谱API Key，需要自行申请(如需要去水印需实名，仅使用文本模型无需实名)
 // 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
 
 // 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版），glm-z1-flash（推理），glm-4.5-flash（4.5系列） 模型，其他模型需自行申请）
