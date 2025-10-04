@@ -521,6 +521,11 @@ export class bigmodel extends plugin {
             await e.reply(await Bot.makeForwardMsg(msgList))
         }
 
+        // 过滤智普多模态回复中的标记
+        content = content.replace(/<\|begin_of_box\|>/, '')
+        content = content.replace(/<\|end_of_box\|>/, '')
+
+        // 过滤首尾空格
         content = content.trim()
 
         // 为兼容文本模型，多模态处理的消息存储为普通格式
