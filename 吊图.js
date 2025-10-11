@@ -295,8 +295,12 @@ export class example extends plugin {
           fnc: 'view'
         },
         {
-          reg: /^#?(吊|叼|屌|铞)图状态/,
+          reg: /^#?(吊|叼|屌|铞)图状态$/,
           fnc: 'status'
+        },
+        {
+          reg: /^#?(吊|叼|屌|铞)图(图片|上传|图片上传)?统计$/,
+          fnc: 'statistics'
         }
       ]
     })
@@ -422,6 +426,27 @@ export class example extends plugin {
       `云图库版本: ${version}`
     ]
     e.reply(msg.join('\n'))
+    return true
+  }
+
+  async statistics(e) {
+    // 统计前缀出现次数
+    const prefixCounts = {};
+    for (const str of img_data.local_img_list) {
+      const prefix = str.split('-')[0];
+      prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+    }
+
+    // 转换为数组并按数量排序（从高到低）
+    const sortedEntries = Object.entries(prefixCounts).sort((a, b) => b[1] - a[1]);
+
+    // 将排序后的结果存入列表
+    const resultList = sortedEntries.map(([prefix, count]) => `用户[${prefix}]上传${count}张`);
+
+    e.reply([
+      "图片上传数量统计\n",
+      resultList.join("\n")
+    ])
     return true
   }
 }
