@@ -14,7 +14,7 @@ async function GLM(imageUrl) {
 
   let data = JSON.stringify({
     "stream": false,
-    "agent_id": "cartoon_generator",
+    "agent_id": "cartoon_generator_agent",
     "messages": [
       {
         "role": "user",
