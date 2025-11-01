@@ -82,16 +82,16 @@ async function get_token() {
     }
 
     // 检查Token是否存在
-    let token = await redis.type("GLM_token")
+    let token = await redis.type("GLM:token:token")
     // 如果Token不存在，获取新的Token
     if (token == 'none') {
         token = await fetch(`https://api2.immersivetranslate.com/big-model/get-token?deviceId=${randomString()}`)
         token = await token.json()
         logger.debug(`[${plugin_name}]获取到新的Token：${token.apiToken}`)
-        await redis.set('GLM_token', token.apiToken, { EX: token.expireTime }) // 保存到redis
+        await redis.set('GLM:token:token', token.apiToken, { EX: token.expireTime }) // 保存到redis
     }
     // 返回Token
-    return await redis.get('GLM_token')
+    return await redis.get('GLM:token:token')
 }
 
 // 下载系统提示词
@@ -384,7 +384,7 @@ export class bigmodel extends plugin {
             msg = `用户引用了这些历史消息：${text_list.join('\n')}\n以上消息可能会帮助回答用户问题，但也有可能不关联，以下是用户的输入：\n${msg}`
         }
 
-        let msg_log = await redis.type(`GLM_chat_log/${e.group_id}_${e.user_id}`)
+        let msg_log = await redis.type(`GLM:chat_log:${e.group_id}:${e.user_id}`)
         if (msg_log == 'none') {
             // 如果msg_log不存在，初始化msg_log
             msg_log = [{
@@ -394,7 +394,7 @@ export class bigmodel extends plugin {
 
         } else {
             // 如果msg_log存在，获取msg_log
-            msg_log = await redis.get(`GLM_chat_log/${e.group_id}_${e.user_id}`)
+            msg_log = await redis.get(`GLM:chat_log:${e.group_id}:${e.user_id}`)
             msg_log = JSON.parse(msg_log)
         }
         // 添加聊天信息
@@ -558,7 +558,7 @@ export class bigmodel extends plugin {
             })
         }
         // 保存对话记录
-        await redis.set(`GLM_chat_log/${e.group_id}_${e.user_id}`, JSON.stringify(msg_log), { EX: 60 * 60 * 24 * 7 }) // 保存到redis，过期时间为7天
+        await redis.set(`GLM:chat_log:${e.group_id}:${e.user_id}`, JSON.stringify(msg_log), { EX: 60 * 60 * 24 * 7 }) // 保存到redis，过期时间为7天
 
         // 长文本分多句发送
         content = content.split('\n')
@@ -570,24 +570,24 @@ export class bigmodel extends plugin {
 
         // 统计token用量
         // 今日用量
-        let token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+        let token_today = parseInt(await redis.get(`GLM:token:Today`), 10)
         if (token_today == 'none') {
             token_today = 0
         }
-        await redis.set(`GLM_chat_token/today`, token_today + Reply.usage.total_tokens)
+        await redis.set(`GLM:token:Today`, token_today + Reply.usage.total_tokens)
         // 总用量
-        let token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
+        let token_history = parseInt(await redis.get(`GLM:token:Statistics`), 10)
         if (token_history == 'none') {
             token_history = 0
         }
-        await redis.set(`GLM_chat_token/Statistics`, token_history + Reply.usage.total_tokens)
+        await redis.set(`GLM:token:Statistics`, token_history + Reply.usage.total_tokens)
 
 
         return true
     }
 
     async clear(e) {
-        await redis.del(`GLM_chat_log/${e.group_id}_${e.user_id}`)
+        await redis.del(`GLM:chat_log:${e.group_id}:${e.user_id}`)
         e.reply('对话记录已清除')
         return true
     }
@@ -740,8 +740,8 @@ export class bigmodel extends plugin {
 
     async GLM_info(e) {
         // 取token用量
-        const token_today = parseInt(await redis.get(`GLM_chat_token/today`), 10)
-        const token_history = parseInt(await redis.get(`GLM_chat_token/Statistics`), 10)
+        const token_today = parseInt(await redis.get(`GLM:token:Today`), 10)
+        const token_history = parseInt(await redis.get(`GLM:token:Statistics`), 10)
 
         // 取随机提示
         const tips = model_list.tips[Math.floor(Math.random() * model_list.tips.length)]
@@ -952,17 +952,17 @@ schedule.scheduleJob('0 0 0 * * *', async () => {
     logger.mark(`[${plugin_name}]开始统计昨日token`)
     try {
         // 获取Redis中的数据
-        const token_history = parseInt(await redis.get(`GLM_chat_token/today`), 10)
+        const token_history = parseInt(await redis.get(`GLM:token:Today`), 10)
 
         // 重置Redis中的数据
-        await redis.set(`GLM_chat_token/today`, 0)
+        await redis.set(`GLM:token:Today`, 0)
 
         // 写入CSV文件
         fs.appendFileSync(`${plugin_data_path}/token_log.csv`, `${formatTimestamp(new Date() - 24 * 60 * 60 * 1000)},${token_history}\n`, 'utf8')
     } catch (error) {
         logger.error(`[${plugin_name}]导出数据失败: ${error}`)
     }
-})
+});
 
 // 每日检测模型更新
 schedule.scheduleJob('0 0 2 * * *', async () => {
@@ -992,5 +992,28 @@ schedule.scheduleJob('0 0 2 * * *', async () => {
 
         logger.mark(`[${plugin_name}]模型列表更新完成`)
     }
-}
-)
+});
+
+// 旧版本redis数据升级
+(async () => {
+    let migrateDone = {}
+
+    try {
+        migrateDone.token_today = await redis.get(`GLM_chat_token/today`)
+        if (migrateDone.token_today) {
+            await redis.set(`GLM:token:Today`, migrateDone.token_today)
+            await redis.del(`GLM_chat_token/today`)
+        }
+
+        migrateDone.token_history = await redis.get(`GLM_chat_token/Statistics`)
+        if (migrateDone.token_history) {
+            await redis.set(`GLM:token:Statistics`, migrateDone.token_history)
+            await redis.del(`GLM_chat_token/Statistics`)
+        }
+
+    } catch (error) {
+        logger.error(`[${plugin_name}] Redis数据迁移失败: ${error.stack}`)
+    } finally {
+        migrateDone = null
+    }
+})()
