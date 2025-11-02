@@ -29,7 +29,7 @@ const hitokoto_api = 'https://v1.hitokoto.cn/?encode=text&charset=utf-8&c=d&c=i&
 const hitokoto_Default_text = '种自己的花，爱自己的宇宙🌍'
 
 /** 冷却相关配置 */
-const cd = 1 // 一天只能触发1次
+const cd = 2 // 一天只能触发1次
 const cd_tips = "点过就别继续发了，还搁这讨赞呢？你是乞丐吗？😏" // 冷却提示
 let user_cd = {} // 初始化冷却数据
 
@@ -44,13 +44,6 @@ async function getHitokoto() {
   }
 }
 
-/**
- * 重置冷却数据
- */
-function Reset_cd() {
-  user_cd = {}
-  logger.mark(`[点赞续火][赞我] 冷却已重置`)
-}
 
 /** 被消息触发 */
 export class dzxh extends plugin {
@@ -71,26 +64,33 @@ export class dzxh extends plugin {
         }
       ],
     }),
-    this.task = {
-      cron: '0 0 0 * * *',
-      name: '定时重置冷却',
-      fnc: () => Reset_cd(), // 指触发的函数
-      log: false // 是否输出日志
-    }
+      this.task = {
+        cron: '0 0 0 * * *',
+        name: '定时重置冷却',
+        fnc: () => this.Reset_cd(), // 指触发的函数
+        log: false // 是否输出日志
+      }
   }
+
+  /** 重置冷却数据 */
+  async Reset_cd() {
+    user_cd = {}
+    logger.mark(`[点赞续火][赞我] 冷却已重置`)
+  }
+
   /** 赞我 */
   async thumbsUpMe(e) {
     // 字段不存在则默认0，存在则保留原值
     user_cd[e.user_id] = user_cd[e.user_id] ?? 0
 
-    // 二次触发
+    // 到达边界提示
     if (user_cd[e.user_id] == cd) {
       e.reply(cd_tips)
       user_cd[e.user_id] += 1
       return true
     }
 
-    // 多次触发，不再回复消息
+    // 已越界，不再回复消息
     if (user_cd[e.user_id] > cd) {
       user_cd[e.user_id] += 1
       return true
