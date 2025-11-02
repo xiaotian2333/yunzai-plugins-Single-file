@@ -8,6 +8,10 @@ const cd = 3 // 一天只能触发1次
 const cd_tips = "今天的次数就这么多，明天继续吧" // 冷却提示
 let user_cd = {} // 初始化冷却数据
 
+/** 反悔相关配置 */
+const regret = true // 是否允许反悔
+let regret_data = {} // 初始化反悔数据
+
 
 /**
  * 将“一行一段话”的字符串转换为数组（支持过滤空行）
@@ -46,8 +50,12 @@ export class example extends plugin {
             priority: 2000,
             rule: [
                 {
-                    reg: '^#?抽头衔$',
+                    reg: /^#?抽头衔$/,
                     fnc: 'ctx'
+                },
+                {
+                    reg: /^#?反悔$/,
+                    fnc: 'fh'
                 }
             ]
         }),
@@ -93,6 +101,29 @@ export class example extends plugin {
         const txt = `${形容词[Math.floor(Math.random() * 形容词.length)]}${名字[Math.floor(Math.random() * 名字.length)]}`
         e.group.setTitle(e.user_id, txt)
         e.reply(`你的新头衔是${txt}`)
+        regret_data[e.user_id] = e.sender.title
+        return true
+    }
+
+    async fh(e) {
+        // 没有开启反悔
+        if (!regret) {
+            e.reply("反悔无效，受着")
+            return false
+        }
+        // 没有历史数据
+        if (!regret_data[e.user_id]) {
+            e.reply("忘了你上一个是啥了，现在这个先用着吧")
+            return false
+        }
+        // 历史与当前一致
+        if (regret_data[e.user_id] === e.sender.title) {
+            e.reply("你又没抽新的，反悔个什么玩意？")
+            return false
+        }
+        // 反悔流程
+        e.group.setTitle(e.user_id, regret_data[e.user_id])
+        e.reply("哼哼，给你新的你也不敢用啊")
         return true
     }
 }
