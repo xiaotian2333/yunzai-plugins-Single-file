@@ -101,9 +101,10 @@
 ### 智谱GLM
 
 基于智谱大模型的聊天插件  
-默认使用`glm-4.5-flash`模型
+默认使用`glm-4-flash-250414`模型
 
 支持开箱即用，但仍建议配置自己的key  
+注意：沉浸式翻译官方已开始封堵第三方调用，如后续再加强检测将放弃免配置key的支持  
 
 直接艾特机器人即可对话  
 可发送 `#重置对话` 清除聊天记录  
@@ -180,19 +181,20 @@
 | 设置项 | 默认设置 | 说明 |
 | --- | --- | --- |
 | Authorization | 空 | `API Key` 如不填则默认使用沉浸式翻译的Token |
-| model | glm-4.5-flash | 默认模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
+| model | glm-4-flash-250414 | 默认模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | web_search | false | 是否开启联网功能，联网搜索至少需要消耗`1000`token |
 | search_engine | search_std | 使用哪个搜索引擎，可配置项参考[这里](https://www.bigmodel.cn/pricing) |
 | max_log | 10 | 聊天记忆深度，建议范围5~20 |
 | think_print | false | 支持思考的模型是否输出思考过程 |
 | on_thinking | true | 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链 |
 | vision_enable | false | 是否开启多模态能力 |
-| vision_model | glm-4.1v-thinking-flash | 多模态模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
+| vision_model | glm-4.5v | 多模态模型版本，可配置项参考[这里](https://www.bigmodel.cn/dev/howuse/model) |
 | system_prompt | 详情见配置文件 | 系统提示词可参考[这里](https://www.bigmodel.cn/dev/howuse/prompt) |
 | list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
 
 > 从2025年6月1日0点起，联网功能收费单价为0.01元/次起，因此改为默认关闭  
 > 此处会隐藏一些一般不用调整的高级配置项，如需要调整请自行修改源码内相关配置  
+> 注意：沉浸式翻译官方已开始封堵第三方调用，如后续再加强检测将放弃免配置key的支持[2025/11/07]  
 
 ### 智谱绘图
 

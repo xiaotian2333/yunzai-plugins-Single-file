@@ -10,20 +10,21 @@ import schedule from 'node-schedule'
 // 智谱API Key，需要自行申请(如需要去水印需实名，仅使用文本模型无需实名)
 // 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
 
-// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版），glm-z1-flash（推理），glm-4.5-flash（4.5系列） 模型，其他模型需自行申请）
+// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版）模型，其他模型需自行申请）
 const Authorization = "" //智谱API Key
-const url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
-let model = "glm-4.5-flash" //模型名称
+let url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
+let model = "glm-4-flash-250414" //模型名称
 let web_search = false //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
 const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
 const max_log = 10 //最大历史记录数
 const plugin_name = "智谱GLM" //插件名称
 const think_print = false //支持思考的模型是否输出思考过程
 const on_thinking = true //仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链。
+const user_agent_disguise = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0" // 伪装ua
 
 // 多模态相关配置，需配置key才可使用
 let vision_enable = false //是否开启多模态
-const vision_model = "glm-4.1v-thinking-flash" //多模态模型名称，参考：https://www.bigmodel.cn/pricing
+const vision_model = "glm-4.5v" //多模态模型名称，参考：https://www.bigmodel.cn/pricing
 const version_do_sample = true //是否启用采样策略来生成文本。默认值为 true。对于需要一致性和可重复性的任务（如代码生成、翻译），建议设置为 false。
 const version_top_p = "0.6" // 不懂勿动
 const version_temperature = "0.8" // 不懂勿动
@@ -85,7 +86,11 @@ async function get_token() {
     let token = await redis.type("GLM:token:token")
     // 如果Token不存在，获取新的Token
     if (token == 'none') {
-        token = await fetch(`https://api2.immersivetranslate.com/big-model/get-token?deviceId=${randomString()}`)
+        token = await fetch(`https://api2.immersivetranslate.com/big-model/get-token?deviceId=${randomString()}`, {
+            headers: {
+                'User-Agent': user_agent_disguise
+            }
+        })
         token = await token.json()
         logger.debug(`[${plugin_name}]获取到新的Token：${token.apiToken}`)
         await redis.set('GLM:token:token', token.apiToken, { EX: token.expireTime }) // 保存到redis
@@ -465,7 +470,7 @@ export class bigmodel extends plugin {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": Authorization || await get_token(),
-                "User-Agent": "GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
+                "User-Agent": user_agent_disguise
             },
             body: JSON.stringify(data)
         })
@@ -783,8 +788,6 @@ export class bigmodel extends plugin {
             }
         )
 
-        //model_list.bigmodel.model_list
-
         for (const [modelName, modelInfo] of Object.entries(model_list.bigmodel.model_list)) {
             msgList.push({
                 user_id: 2854200865,
@@ -938,10 +941,11 @@ if (!system_prompt) {
     system_prompt = system_prompt_list.system_prompt + model_list.default_prompt
 }
 
-// 多模态能力判断
+// 未填写key判断
 if (!Authorization) {
     logger.warn(`[${plugin_name}]未配置key，无法使用多模态能力`)
     vision_enable = false
+    url = "https://aigw1.immersivetranslate.com/api/paas/v4/chat/completions"
 }
 
 
