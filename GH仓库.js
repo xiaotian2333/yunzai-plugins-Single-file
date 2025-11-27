@@ -40,12 +40,12 @@ export class example extends plugin {
     // 构建完整的URL
     let url = baseurl + '/' + name + '/' + repo
 
-    // 提取issues或pull request字段
+    // 提取issues、pull request、commit字段
     const issueOrPR = msg.split('/')[3]
-    if (issueOrPR == 'issues' || issueOrPR == 'pull') {
+    if (issueOrPR == 'issues' || issueOrPR == 'pull' || issueOrPR == 'commit') {
       const Quantity = msg.split('/')[4];
-      // 如果是数字，则添加到url
-      if (Quantity && /^\d+$/.test(Quantity)) {
+      // 如果是数字（issues、pr）或commit哈希值，则添加到url
+      if (Quantity && (/^\d+$/.test(Quantity) || /^[a-f0-9]{40}$/.test(Quantity))) {
         url += '/' + issueOrPR + '/' + Quantity
       }
     }
