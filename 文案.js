@@ -78,7 +78,7 @@ export class copywriting extends plugin {
           fnc: 'qndxx'
         },
         {
-          reg: /^#?(古|诗|词)(名句)?/,
+          reg: /^#?古(诗|词|名句|诗词)/,
           fnc: 'poetry'
         },
         {
