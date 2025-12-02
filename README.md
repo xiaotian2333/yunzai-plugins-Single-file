@@ -20,7 +20,7 @@
 ### GH仓库
 
 在检测到github链接时发送仓库速览图  
-支持仓库、issue、pr、commit的速览图  
+支持仓库、issue、pr、commit、release的速览图  
 速览图如下  
 
 ![示例图](https://opengraph.githubassets.com/xiaotian/xiaotian2333/yunzai-plugins-Single-file)

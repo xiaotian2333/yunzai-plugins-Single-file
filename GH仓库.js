@@ -51,7 +51,11 @@ export class example extends plugin {
     }
     // 提取releases字段
     if (Subpage == 'releases') {
-      const tag = msg.split('/')[4]
+      let tag = msg.split('/')[4]
+      // 如果tag字段是download表明这是下载链接，需替换为tag
+      if (tag == 'download') {
+        tag = 'tag'
+      }
       const version = msg.split('/')[5]
       if (tag) {
         url += '/' + Subpage + '/' + tag + '/' + version
