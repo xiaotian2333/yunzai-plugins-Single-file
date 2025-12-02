@@ -474,7 +474,7 @@ export class bigmodel extends plugin {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": api_key || await get_token(),
+                "Authorization": `Bearer ${api_key || await get_token()}`,
                 "User-Agent": user_agent_disguise
             },
             body: JSON.stringify(data)
