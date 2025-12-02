@@ -11,8 +11,8 @@ import schedule from 'node-schedule'
 // 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
 
 // 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版）模型，其他模型需自行申请）
-const Authorization = "" //智谱API Key
-let url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //智谱API接口,不要修改
+const Authorization = "" //API Key
+const base_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //API接口，openai兼容
 let model = "glm-4-flash-250414" //模型名称
 let web_search = false //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
 const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
@@ -24,10 +24,12 @@ const user_agent_disguise = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebK
 
 // 多模态相关配置，需配置key才可使用
 let vision_enable = false //是否开启多模态
+const version_Authorization = "" //多模态API Key
+const version_url = "https://x666.me/v1/chat/completions" // 模型版本接口,不要修改
 const vision_model = "glm-4.5v" //多模态模型名称，参考：https://www.bigmodel.cn/pricing
 const version_do_sample = true //是否启用采样策略来生成文本。默认值为 true。对于需要一致性和可重复性的任务（如代码生成、翻译），建议设置为 false。
-const version_top_p = "0.6" // 不懂勿动
-const version_temperature = "0.8" // 不懂勿动
+const version_top_p = 0.6 // 不懂勿动
+const version_temperature = 0.8 // 不懂勿动
 
 
 // 系统提示词，引导模型进行对话
@@ -420,56 +422,59 @@ export class bigmodel extends plugin {
         msg_log[0].content = replace_var(system_prompt, this.e.bot.nickname)
 
         let data = {}
+        let llm_url = base_url
+        let api_key = Authorization
         // 构建请求体
         if (isVision && vision_enable) {
             // 多模态处理
             logger.debug(`[${plugin_name}]进入多模态处理，构建多模态请求`)
+            llm_url = version_url
+            api_key = version_Authorization
             data = {
-                "model": vision_model,
-                "messages": msg_log,
-                "do_sample": version_do_sample,
-                "temperature": version_temperature,
-                "top_p": version_top_p,
-                "stream": "false",
-                "user_id": `${e.group_id}_${e.user_id}`,
-                "tools": [{
-                    "type": "web_search",
-                    "web_search": {
-                        "enable": web_search,
-                        "search_engine": search_engine,  // 选择搜索引擎类型
-                    }
-                }],
+                model: vision_model,
+                messages: msg_log,
+                do_sample: version_do_sample,
+                temperature: version_temperature,
+                top_p: version_top_p,
+                stream: false,
+                user_id: `${e.group_id}_${e.user_id}`,
             }
         } else {
             // 单模态处理
             logger.debug(`[${plugin_name}]未激活多模态处理，构建文本请求`)
             data = {
-                "model": model,
-                "messages": msg_log,
-                "do_sample": "true",
-                "temperature": "0.8", // 温度，0.8是默认值，可以调整
-                "stream": "false",
-                "user_id": `${e.group_id}_${e.user_id}`,
-                "tools": [{
-                    "type": "web_search",
-                    "web_search": {
-                        "enable": web_search,
-                        "search_engine": search_engine,  // 选择搜索引擎类型
-                    }
-                }],
-                "thinking": {
-                    type: on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
-                }
+                model: model,
+                messages: msg_log,
+                do_sample: true,
+                temperature: 0.8, // 温度，0.8是默认值，可以调整
+                stream: false,
+                user_id: `${e.group_id}_${e.user_id}`,
             }
         }
 
+        // 开启搜索功能
+        if (web_search) {
+            data.tools = [{
+                type: "web_search",
+                web_search: {
+                    enable: web_search,
+                    search_engine: search_engine,  // 选择搜索引擎类型
+                }
+            }]
+        }
+        // 注入思考参数
+        if (on_thinking) {
+            data.thinking = {
+                type: on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
+            }
+        }
 
         // 网络请求
-        let Reply = await fetch(url, {
+        let Reply = await fetch(llm_url, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": Authorization || await get_token(),
+                "Authorization": api_key || await get_token(),
                 "User-Agent": user_agent_disguise
             },
             body: JSON.stringify(data)
