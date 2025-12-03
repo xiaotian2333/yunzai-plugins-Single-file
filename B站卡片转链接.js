@@ -33,7 +33,7 @@ export class bili extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: /b23.tv/,
+          reg: /view_8C8E89B49BE609866298ADDFF2DBABA4/,
           fnc: "video"
         },
         {
