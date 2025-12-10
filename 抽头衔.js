@@ -3,6 +3,8 @@
 * 开源地址：https://github.com/xiaotian2333/yunzai-plugins-Single-file
 */
 
+import schedule from 'node-schedule';
+
 /** 冷却相关配置 */
 const cd = 3 // 一天只能触发1次
 const cd_tips = "今天的次数就这么多，明天继续吧" // 冷却提示
@@ -58,20 +60,7 @@ export class example extends plugin {
                     fnc: 'fh'
                 }
             ]
-        }),
-            this.task = {
-                cron: '0 0 0 * * *',
-                name: '定时重置冷却',
-                fnc: () => this.Reset_cd(), // 指触发的函数
-                log: false // 是否输出日志
-            }
-    }
-
-
-    // 重置冷却数据
-    async Reset_cd() {
-        user_cd = {}
-        logger.mark(`[抽头衔] 冷却已重置`)
+        })
     }
 
     async ctx(e) {
@@ -127,3 +116,9 @@ export class example extends plugin {
         return true
     }
 }
+
+// 每日重置使用限制
+schedule.scheduleJob('0 0 0 * * *', async () => {
+  user_cd = {}
+  logger.mark(`[抽头衔] 冷却已重置`)
+});

@@ -6,6 +6,7 @@ import axios from 'axios' // 网络请求依赖
 import fs from 'fs/promises'
 import crypto from 'crypto'
 import path from "path"
+import schedule from 'node-schedule';
 
 // 配置项
 // 本地图库配置
@@ -190,14 +191,6 @@ async function getPriorityImage(e) {
 }
 
 /**
- * 重置冷却数据
- */
-function Reset_cd() {
-  user_cd = {}
-  logger.mark(`[${plugin_name}]冷却已重置`)
-}
-
-/**
  * 通过网络URL获取图片并转换为AVIF格式
  * @param {string} imageUrl - 图片的网络URL
  * @param {number} quality - AVIF压缩质量（0-100，默认60）
@@ -304,12 +297,6 @@ export class example extends plugin {
         }
       ]
     })
-    this.task = {
-      cron: '0 0 0 * * *',
-      name: '定时重置冷却',
-      fnc: () => Reset_cd(), // 指触发的函数
-      log: false // 是否输出日志
-    }
   }
 
   async start(e) {
@@ -450,3 +437,9 @@ export class example extends plugin {
     return true
   }
 }
+
+// 每日重置使用限制
+schedule.scheduleJob('0 0 0 * * *', async () => {
+  user_cd = {}
+  logger.mark(`[吊图] 冷却已重置`)
+});

@@ -63,19 +63,7 @@ export class dzxh extends plugin {
           fnc: "hitokoto",
         }
       ],
-    }),
-      this.task = {
-        cron: '0 0 0 * * *',
-        name: '定时重置冷却',
-        fnc: () => this.Reset_cd(), // 指触发的函数
-        log: false // 是否输出日志
-      }
-  }
-
-  /** 重置冷却数据 */
-  async Reset_cd() {
-    user_cd = {}
-    logger.mark(`[点赞续火][赞我] 冷却已重置`)
+    })
   }
 
   /** 赞我 */
@@ -150,3 +138,9 @@ schedule.scheduleJob('30 15 12 * * *', async () => {
     await sleep(2000) // 等2秒在下一个
   }
 })
+
+// 每日重置使用限制
+schedule.scheduleJob('0 0 0 * * *', async () => {
+  user_cd = {}
+  logger.mark(`[点赞续火][赞我] 冷却已重置`)
+});
