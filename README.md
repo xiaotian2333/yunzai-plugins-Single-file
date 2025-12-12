@@ -101,6 +101,8 @@
 
 ### 智谱GLM
 
+> 此插件半停更状态，仅修复bug，建议使用新插件[new-api](https://github.com/xiaotian2333/yunzai-plugins-Single-file#new-api)
+
 基于智谱大模型的聊天插件  
 默认使用`glm-4-flash-250414`模型
 
@@ -304,6 +306,95 @@ cd plugins/example && pnpm add axios
 支持自定义群友每日可用次数  
 
 发送 `#抽头衔` 即可随机抽取  
+
+### new-api
+
+主要对接new-api的聊天插件，由智谱GLM插件优化而来  
+
+直接艾特机器人或消息包含机器人昵称即可对话  
+可发送 `#重置对话` 清除聊天记录，管理员可使用 `#重置所有对话` 清除所有聊天记录  
+管理员可使用 `#切换预设` 切换预设  
+使用 `#预设列表` 查看预设列表  
+
+管理员可使用 `#切换模型` 可在机器人运行时临时切换模型  
+
+插件初次加载时自动下载云端配置文件  
+默认数据目录为`./data/plugins/智谱GLM/`  
+
+> 处于兼容性考虑，此路径暂不更改
+
+支持统计每日token用量，并于每日0点自动导出昨日统计到数据目录  
+
+<details>
+<summary>默认格式</summary>
+
+此处展示的文本限于篇幅，大幅精简且不会实时更新  
+如需查看原始文件请点击对应的链接查看  
+
+[system_prompt.json](https://oss.xt-url.com/GPT-Config/system_prompt.json)
+
+``` json
+{
+    "预设名1": "预设内容1",
+    "预设名2": "预设内容2"
+}
+```
+
+[model_list.json](https://oss.xt-url.com/GPT-Config/model_list.json)
+
+``` json
+{
+    "data": "2025年5月4日",
+    "version": "1.2.2",
+    "author": "xiaotian2333",
+    "tips": [
+        "每日token统计信息可在插件数据目录token_log.csv查看"
+    ],
+    "bigmodel": {
+        "name": "智谱",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "instructions": "模型价格为官网公示价格",
+        "model_list": {
+            "glm-4-flash-250414": {
+                "instructions": "免费的语言模型",
+                "Price": "免费",
+                "free": true,
+                "type": "语言模型"
+            },
+            "glm-z1-air": {
+                "instructions": "具备强大推理能力，适用于需要深度推理的任务",
+                "Price": "0.5元|百万Tokens",
+                "free": false,
+                "type": "推理模型"
+            },
+            "codegeex-4": {
+                "instructions": "代码优化模型，专为程序员准备",
+                "Price": "0.1元|百万Tokens",
+                "free": false,
+                "type": "代码模型"
+            }
+        }
+    }
+}
+```
+
+</details>
+
+#### 可配置的参数如下
+
+| 设置项 | 默认设置 | 说明 |
+| --- | --- | --- |
+| Authorization | 空 | `API Key` |
+| base_url | 默认为本地 | openai标准的api地址 |
+| model | 空 | 默认模型 |
+| max_log | 10 | 聊天记忆深度，建议范围5~20 |
+| think_print | false | 支持思考的模型是否输出思考过程 |
+| vision_enable | false | 是否开启多模态能力 |
+| vision_model | 空 | 多模态模型 |
+| system_prompt | 空 | 此配置为空时会自动获取云端默认系统提示词 |
+| list | 详情见源码 | 屏蔽词列表，用于过滤敏感词 |
+
+> 此处会隐藏一些一般不用调整的高级配置项，如需要调整请自行修改源码内相关配置  
 
 ---
 

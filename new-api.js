@@ -1,7 +1,7 @@
 /**
 * 作者：xiaotian2333
 * 开源地址：https://github.com/xiaotian2333/yunzai-plugins-Single-file
-* 此版本为早期针对智谱开发的专属版，兼容标准openai，如果使用new-api来中转请求更推荐使用new-api.js
+* 此版本为针对new-api专门优化的版本，不支持开箱即用，如只使用智谱推荐使用智谱GLM.js
 * 两个版本的对话记忆、token统计互通。但智谱GLM.js将暂停更新，仅修复bug
 */
 
@@ -9,27 +9,20 @@ import fetch from "node-fetch"
 import fs from "fs"
 import schedule from 'node-schedule'
 
-// 智谱API Key，需要自行申请(如需要去水印需实名，仅使用文本模型无需实名)
-// 申请链接：https://www.bigmodel.cn/invite?icode=iGW2wQ0KiXGc0PVU%2BeTSFEjPr3uHog9F4g5tjuOUqno%3D
-
-// 可不填，不填则使用沉浸式翻译的Token（仅可使用 glm-4-flash（旧版），glm-4-flash-250414（新版）模型，其他模型需自行申请）
-const Authorization = "" //API Key
-const base_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" //API接口，openai兼容
-let model = "glm-4-flash-250414" //模型名称
-let web_search = false //是否使用web搜索，从2025年6月1日0点起，收费单价为0.01元/次，因此改为默认关闭
-const search_engine = "search_std" //搜索引擎名称，参考：https://www.bigmodel.cn/pricing
-const max_log = 10 //最大历史记录数
-const plugin_name = "智谱GLM" //插件名称
-const think_print = false //支持思考的模型是否输出思考过程
-const on_thinking = true //仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链。
+const Authorization = "" // API Key
+const base_url = "http://localhost:8000/v1/chat/completions" // API接口，openai兼容
+let model = "" // 模型名称
+const max_log = 10 // 最大历史记录数
+const plugin_name = "new-api" // 插件名称
+const think_print = false // 支持思考的模型是否输出思考过程
 const user_agent_disguise = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0" // 伪装ua
 
-// 多模态相关配置，需配置key才可使用
-let vision_enable = false //是否开启多模态
-const version_Authorization = "" //多模态API Key
-const version_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions" // 模型版本接口,不要修改
-const vision_model = "glm-4.6v" //多模态模型名称，参考：https://www.bigmodel.cn/pricing
-const version_do_sample = true //是否启用采样策略来生成文本。默认值为 true。对于需要一致性和可重复性的任务（如代码生成、翻译），建议设置为 false。
+// 多模态相关配置
+let vision_enable = false // 是否开启多模态
+const version_Authorization = "" // 多模态API Key
+const version_url = "http://localhost:8000/v1/chat/completions" // 多模态API接口，openai兼容
+const vision_model = "" // 多模态模型名称
+const version_do_sample = true // 是否启用采样策略来生成文本。默认值为 true。对于需要一致性和可重复性的任务（如代码生成、翻译），建议设置为 false。
 const version_top_p = 0.6 // 不懂勿动
 const version_temperature = 0.8 // 不懂勿动
 
@@ -37,7 +30,7 @@ const version_temperature = 0.8 // 不懂勿动
 // 系统提示词，引导模型进行对话
 // 请通过配置文件进行修改，不要直接修改代码
 // 配置文件路径
-const plugin_data_path = `./data/plugins/智谱GLM/`
+const plugin_data_path = `./data/plugins/智谱GLM/` // 插件数据路径，由于历史兼容考虑，不建议修改
 const system_prompt_file = `${plugin_data_path}system_prompt.json`
 const model_list_file = `${plugin_data_path}model_list.json`
 let system_prompt
@@ -66,43 +59,6 @@ function readJsonFile(path) {
 }
 
 
-// 生成32位随机字符串
-let Random_device_ID
-function randomString() {
-    if (Random_device_ID) { return Random_device_ID }
-    let str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    for (let i = 0; i < 32; i++) {
-        let id = Math.ceil(Math.random() * str.length)
-        Random_device_ID += str.charAt(id)
-    }
-    logger.debug(`[${plugin_name}]生成新的设备ID：${Random_device_ID}`)
-    return Random_device_ID
-}
-
-// 获取Token
-async function get_token() {
-    // 如果Authorization存在，直接返回
-    if (Authorization) {
-        return Authorization
-    }
-
-    // 检查Token是否存在
-    let token = await redis.type("GLM:token:token")
-    // 如果Token不存在，获取新的Token
-    if (token == 'none') {
-        token = await fetch(`https://api2.immersivetranslate.com/big-model/get-token?deviceId=${randomString()}`, {
-            headers: {
-                'User-Agent': user_agent_disguise
-            }
-        })
-        token = await token.json()
-        logger.debug(`[${plugin_name}]获取到新的Token：${token.apiToken}`)
-        await redis.set('GLM:token:token', token.apiToken, { EX: token.expireTime }) // 保存到redis
-    }
-    // 返回Token
-    return await redis.get('GLM:token:token')
-}
-
 // 下载系统提示词
 async function Download_file(url, path) {
     try {
@@ -112,7 +68,7 @@ async function Download_file(url, path) {
         logger.debug(`[${plugin_name}]正在下载来自 ${url} 的文件`)
         const response = await fetch(url, {
             headers: {
-                'User-Agent': 'GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
+                'User-Agent': 'new-api (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)'
             }
         })
         // 检查响应状态
@@ -207,6 +163,7 @@ async function get_quote_message(getReply) {
         }
     }
 }
+
 /**
  * 将消息列表拆分并分类
  * @param {list} message 
@@ -240,48 +197,65 @@ function split_message(message) {
     }
 }
 
+/**
+ * 批量删除Redis中匹配指定模式的键（完全参考你的实测代码实现）
+ * @param {string} pattern - 键匹配模式，如GLM:chat_log:123456:*
+ * @param {number} [count=5000] - 每次SCAN遍历的键数量（和你的代码保持一致，设为5000）
+ * @returns {number} 总共删除的键数量
+ */
+async function batchDeleteRedisKeys(pattern, count = 5000) {
+    let total = 0; // 记录总共删除的键数量
+    let cursor = 0; // SCAN的游标，0表示开始迭代
+
+    do {
+        // 完全参考你的代码：scan调用方式为 cursor + 配置对象 { MATCH, COUNT }
+        const res = await redis.scan(cursor, {
+            MATCH: pattern,
+            COUNT: count
+        });
+        // 更新游标（res.cursor是返回的新游标，和你的代码一致）
+        cursor = res.cursor;
+        // 有匹配的键时，批量删除（直接传res.keys数组，和你的代码一致）
+        if (res.keys.length > 0) {
+            const delCount = await redis.del(res.keys);
+            total += delCount;
+            // logger.info(`[${plugin_name}][批量删除] 本次删除${delCount}个键，匹配模式：${pattern}，当前游标：${cursor}`);
+        }
+    } while (cursor !== 0); // 游标为0时遍历结束
+
+    return total;
+}
+
 export class bigmodel extends plugin {
     constructor() {
         super({
-            name: '智谱GLM',
+            name: plugin_name,
             event: 'message',
             priority: 9000,
             rule: [
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(新开|重启|重置|清空|删除|清楚|清除)(聊天|对话|记录|记忆|历史)$/,
+                    reg: /^#(智谱|new-api|gpt)?(新开|重启|重置|清空|删除|清楚|清除)(全部|所有|全局|一切|本群|此群|当前群)?(聊天|对话|记录|记忆|历史)$/,
                     fnc: 'clear',
                 },
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(角色|身份|人物|设定|提示词|预设|人格)列表$/,
+                    reg: /^#(智谱|new-api|gpt)?(角色|身份|人物|设定|提示词|预设|人格)列表$/,
                     fnc: 'role_list',
                 },
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)/,
+                    reg: /^#(智谱|new-api|gpt)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)/,
                     fnc: 'role',
                 },
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)?/,
+                    reg: /^#(智谱|new-api|gpt)?(更新|下载|克隆)(角色|身份|人物|设定|提示词|预设|人格)?(文件|配置|配置文件|数据)?/,
                     fnc: 'pull_1',
                 },
                 {
-                    reg: /^#(?:(智谱|[Gg][Ll][Mm])(状态|info)(信息|数据)?|(状态|info)(信息|数据)?)$/,
+                    reg: /^#(?:(智谱|new-api|gpt)(状态|info)(信息|数据)?|(状态|info)(信息|数据)?)$/,
                     fnc: 'GLM_info',
                 },
                 {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(模型|model)(列表|信息|数据)?/,
-                    fnc: 'model_list_help',
-                },
-                {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(强制|强行)?(更换|切换|换|改|设置)(模型|model)/,
+                    reg: /^#(智谱|new-api|gpt)?(更换|切换|换|改|设置)(模型|model)/,
                     fnc: 'model_set',
-                },
-                {
-                    reg: /^#(智谱|[Gg][Ll][Mm])?(开启|打开|关闭|取消)(联网|搜索|网络)$/,
-                    fnc: 'web_search_set',
-                },
-                {
-                    reg: /^#(智谱|[Gg][Ll][Mm])(查询)?(余额|钱包|金额|消费|财务)$/,
-                    fnc: 'balance',
                 },
                 {
                     reg: '',
@@ -323,11 +297,6 @@ export class bigmodel extends plugin {
         if (msg.length > 200 && !e.isMaster) {
             e.reply('输入文本长度过长')
             return true
-        }
-        // 多模态能力判断
-        if (!Authorization && vision_enable) {
-            logger.warn(`[${plugin_name}]未配置key，无法使用多模态能力`)
-            vision_enable = false
         }
 
         logger.mark(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
@@ -454,29 +423,12 @@ export class bigmodel extends plugin {
             }
         }
 
-        // 开启搜索功能
-        if (web_search) {
-            data.tools = [{
-                type: "web_search",
-                web_search: {
-                    enable: web_search,
-                    search_engine: search_engine,  // 选择搜索引擎类型
-                }
-            }]
-        }
-        // 注入思考参数
-        if (on_thinking) {
-            data.thinking = {
-                type: on_thinking ? 'enabled' : 'disabled',  // 仅 GLM-4.5 及以上模型支持此参数配置. 控制大模型是否开启思维链
-            }
-        }
-
         // 网络请求
         let Reply = await fetch(llm_url, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${api_key || await get_token()}`,
+                "Authorization": `Bearer ${api_key}`,
                 "User-Agent": user_agent_disguise
             },
             body: JSON.stringify(data)
@@ -485,18 +437,13 @@ export class bigmodel extends plugin {
 
         // 错误处理
         if (Reply.error) {
-            if (Reply.error.code == "1210") {
-                e.reply(`暂不支持gif或尺寸过小的图片识别`)
-                logger.error(`[${plugin_name}]发生错误，响应码[${Reply.error.code}]\n来自API的错误信息：\n${Reply?.error?.message || Reply?.msg || "没有来自API的错误信息"}`)
-                logger.error(`[${plugin_name}]此错误通常由图片尺寸过小或gif图片导致，如图片链接无法被智谱访问也会产生此报错`)
-                return false
-            }
             e.reply(`[${plugin_name}]发生错误，响应码[${Reply.code || Reply.error.code || "无"}]\n来自API的错误信息：\n${Reply?.error?.message || Reply?.msg || "没有来自API的错误信息"}`)
             return false
         }
         // 检查choices是否存在
         if (!Reply?.choices || !Reply?.choices[0]) {
             e.reply(`[${plugin_name}]API返回格式错误：缺少回复数据`)
+            logger.error(`[${plugin_name}]发生错误，缺少回复数据\n来自API的返回数据：\n${JSON.stringify(Reply)}`)
             return false
         }
         // 获取回复内容
@@ -594,14 +541,41 @@ export class bigmodel extends plugin {
         }
         await redis.set(`GLM:token:Statistics`, token_history + Reply.usage.total_tokens)
 
-
         return true
     }
 
     async clear(e) {
-        await redis.del(`GLM:chat_log:${e.group_id}:${e.user_id}`)
-        e.reply('对话记录已清除')
-        return true
+        const ALL_Group = /全部|所有|全局|一切/;
+        const Current_Group = /本群|此群|当前群/;
+        // 解构关键参数
+        const { group_id, user_id, isMaster, msg, reply } = e;
+
+        // 主人发送关键词，批量删除所有对话记录
+        if (isMaster && ALL_Group.test(msg)) {
+            const pattern = `GLM:chat_log:*`;
+            // 调用批量删除函数
+            const deleteCount = await batchDeleteRedisKeys(pattern);
+            logger.info(`[${plugin_name}][清理记录] 主人已清除所有对话记录，匹配模式：${pattern}，共删除${deleteCount}条`);
+            await reply('已清除所有对话记录');
+            return true;
+        }
+
+        // 主人发送关键词，批量删除群内对话记录
+        if (isMaster && Current_Group.test(msg)) {
+            const pattern = `GLM:chat_log:${group_id}:*`;
+            // 调用批量删除函数
+            const deleteCount = await batchDeleteRedisKeys(pattern);
+            logger.info(`[${plugin_name}][清理记录] 主人已清除群${group_id}的所有对话记录，匹配模式：${pattern}，共删除${deleteCount}条`);
+            await reply('已清除本群对话记录');
+            return true;
+        }
+
+        // 非主人/未发送关键词：删除单个用户的对话记录
+        const singleKey = `GLM:chat_log:${group_id}:${user_id}`;
+        const deleteResult = await redis.del(singleKey);
+        logger.info(`[${plugin_name}][清理记录] 用户${user_id}已清除群${group_id}的个人对话记录，键：${singleKey}，删除结果：${deleteResult}`);
+        await reply('对话记录已清除');
+        return true;
     }
 
     async role_list(e) {
@@ -634,7 +608,7 @@ export class bigmodel extends plugin {
             return false
         }
 
-        const name = e.msg.replace(/^#(智谱|[Gg][Ll][Mm])?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)/, '')
+        const name = e.msg.replace(/^#(智谱|new-api|gpt)?(切换|更改|换)(角色|身份|人物|设定|提示词|预设|人格)/, '')
 
         if (!name) {
             e.reply('请输入要切换的预设\n\n发送 #智谱预设列表 查看可切换的预设')
@@ -761,13 +735,10 @@ export class bigmodel extends plugin {
         // 构建信息
         const msg = [
             `=====${plugin_name}当前状态=====\n`,
-            `密钥状态：${Authorization ? '已配置' : '未配置'}\n`,
             `今日token消耗：${token_today}\n`,
             `累计token消耗：${token_history}\n`,
             `当前模型：${model}\n`,
             `数据版本：${model_list.version}\n`,
-            `联网能力：${web_search ? '开启' : '关闭'}\n`,
-            `思考能力：${on_thinking ? '开启' : '关闭'}\n`,
             `思考输出：${think_print ? '开启' : '关闭'}\n`,
             `多模态能力：${vision_enable ? '开启' : '关闭'}\n`,
             `=====================\n`,
@@ -780,34 +751,6 @@ export class bigmodel extends plugin {
         return true
     }
 
-    async model_list_help(e) {
-        let msgList = []
-        msgList.push(
-            {
-                user_id: 2854200865,
-                nickname: '更新时间',
-                message: model_list.data
-            },
-            {
-                user_id: 2854200865,
-                nickname: '当前版本',
-                message: model_list.version
-            }
-        )
-
-        for (const [modelName, modelInfo] of Object.entries(model_list.bigmodel.model_list)) {
-            msgList.push({
-                user_id: 2854200865,
-                nickname: '模型介绍',
-                message: `模型：${modelName}\n介绍：${modelInfo.instructions}\n价格：${modelInfo.Price}\n类型：${modelInfo.type}`
-            })
-        }
-
-        // 发送消息
-        await e.reply(await Bot.makeForwardMsg(msgList))
-        return true
-    }
-
     async model_set(e) {
         // 只允许主人使用
         if (!e.isMaster) {
@@ -816,99 +759,15 @@ export class bigmodel extends plugin {
         }
 
         // 获取命令参数
-        const model_name = e.msg.replace(/^#(智谱|[Gg][Ll][Mm])?(强制|强行)?(更换|切换|换|改|设置)(模型|model)\s*/, '')
+        const model_name = e.msg.replace(/^#(智谱|new-api|gpt)?(更换|切换|换|改|设置)(模型|model)\s*/, '')
         if (!model_name) {
-            e.reply('请指定要切换的模型名称\n\n可发送 #模型列表 查看所有可用模型')
-            return false
-        }
-        // 强制切换则不检查模型是否存在
-        if (e.msg.includes('强制') || e.msg.includes('强行')) {
-            model = model_name
-            e.reply(`已强制切换模型为：${model_name}`)
-            return true
-        }
-
-        // 检查模型是否存在
-        let finish = false
-        for (const [modelName] of Object.entries(model_list.bigmodel.model_list)) {
-            if (modelName === model_name) {
-                finish = true
-            }
-        }
-        if (!finish) {
-            e.reply(`模型 ${model_name} 不存在，请检查模型名称是否正确\n\n可发送 #模型列表 查看所有可用模型\n如确实需要切换请发送 #强制切换模型 进行切换`)
+            e.reply('请指定要切换的模型名称')
             return false
         }
 
-        // 切换模型
+        // 切换模型，不再检查模型是否存在
         model = model_name
         e.reply(`已切换模型为：${model_name}`)
-        return true
-    }
-
-    async web_search_set(e) {
-        // 只允许主人使用
-        if (!e.isMaster) {
-            e.reply('只有主人才能更改联网设置')
-            return false
-        }
-
-        // 判断是开启还是关闭联网
-        if (e.msg.includes('开启') || e.msg.includes('打开')) {
-            web_search = true
-            e.reply(`已开启联网功能`)
-        }
-        if (e.msg.includes('关闭') || e.msg.includes('取消')) {
-            web_search = false
-            e.reply(`已关闭联网功能`)
-        }
-
-        return true
-    }
-
-    async balance(e) {
-        // 只允许主人使用
-        if (!e.isMaster) {
-            e.reply('只有主人才能查询余额')
-            return false
-        }
-
-        // 仅在配置了密钥时才查询余额
-        if (!Authorization) {
-            e.reply('没有配置密钥，无法查询余额')
-            return false
-        }
-
-        // 查询余额
-        let balance = await fetch("https://www.bigmodel.cn/api/biz/account/query-customer-account-report", {
-            method: 'GET',
-            headers: {
-                'Authorization': Authorization,
-                'Content-Type': 'application/json'
-            }
-        })
-        balance = await balance.json()
-        if (!balance.success) {
-            e.reply('查询余额失败，请检查密钥是否正确')
-            return false
-        }
-        balance = balance.data
-
-        // 构建信息
-        const msg = [
-            `=====${plugin_name}财务总览=====\n`,
-            `当前余额：${balance.balance}\n`,
-            `累计充值：${balance.rechargeAmount}\n`,
-            `赠送金额：${balance.giveAmount}\n`,
-            `=====================\n`,
-            `累计消费：${balance.totalSpendAmount}\n`,
-            `冻结余额：${balance.frozenBalance}\n`,
-            `可用余额：${balance.availableBalance}\n`,
-            `=====================\n`
-        ]
-
-        // 发送信息
-        e.reply(msg)
         return true
     }
 }
@@ -948,15 +807,6 @@ if (!system_prompt) {
     system_prompt = system_prompt_list.system_prompt + model_list.default_prompt
 }
 
-// 未填写key判断
-if (!Authorization) {
-    logger.warn(`[${plugin_name}]未配置key，无法使用多模态能力`)
-    vision_enable = false
-    url = "https://aigw1.immersivetranslate.com/api/paas/v4/chat/completions"
-}
-
-
-
 // 每日统计token
 schedule.scheduleJob('0 0 0 * * *', async () => {
     //schedule.scheduleJob('1 * * * * *', async () => { // 测试用
@@ -987,7 +837,7 @@ schedule.scheduleJob('0 0 2 * * *', async () => {
     let Reply = await fetch('https://oss.xt-url.com/GPT-Config/model_list.json', {
         headers: {
             "Content-Type": "application/json",
-            "User-Agent": "GLM (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
+            "User-Agent": "new-api (author by xiaotian2333) github(https://github.com/xiaotian2333/yunzai-plugins-Single-file)"
         }
     })
     Reply = await Reply.json()
