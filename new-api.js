@@ -449,6 +449,14 @@ export class bigmodel extends plugin {
         // 获取回复内容
         let content = Reply.choices[0].message.content
 
+        // 输出过滤
+        if (list.some(item => content.includes(item))) {
+            // 检测到需要过滤的词后的处理逻辑
+            logger.mark(`[${plugin_name}]检测到敏感词，已过滤`)
+            e.reply("输出包含敏感词，已拦截")
+            return true
+        }
+
         // 过滤思考过程
         let think_text = ''
         // 标准思考处理
