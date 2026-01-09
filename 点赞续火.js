@@ -21,6 +21,8 @@ const thumbsUpMe_sum = 10
 
 /** 点赞消息推送文本 */
 const thumbsUpMe_msg = '派蒙给你点赞啦，记得给我回赞哦'
+/** 点赞失败提示 */
+const thumbsUpMe_fail_msg = '派蒙找不到点赞按钮啊，你没加我好友吧'
 
 /** 一言接口，请使用纯文本的接口 */
 const hitokoto_api = 'https://v1.hitokoto.cn/?encode=text&charset=utf-8&c=d&c=i&c=h&c=e'
@@ -87,8 +89,11 @@ export class dzxh extends plugin {
     // 加入冷却
     user_cd[e.user_id] += 1
 
-    Bot.pickFriend(this.e.user_id).thumbUp(thumbsUpMe_sum)
-    this.e.reply(thumbsUpMe_msg)
+    if (Bot.pickFriend(this.e.user_id)?.thumbUp(thumbsUpMe_sum)) {
+      this.e.reply(thumbsUpMe_msg)
+    } else {
+      this.e.reply(thumbsUpMe_fail_msg)
+    }
     return true
   }
   /** 续火 */
