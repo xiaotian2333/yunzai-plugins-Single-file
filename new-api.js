@@ -271,6 +271,9 @@ export class bigmodel extends plugin {
     async chat(e) {
         // if (!e.isMaster) { return false } // 只允许主人使用
 
+        // 不处理机器人自己的消息
+        if (e.user_id === this.e.bot.uin) { return false } 
+
         // 先过滤非文本信息
         if (!e.msg) { return false }
 
