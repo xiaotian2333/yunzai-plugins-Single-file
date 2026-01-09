@@ -16,6 +16,8 @@ const max_log = 10 // 最大历史记录数
 const plugin_name = "new-api" // 插件名称
 const think_print = false // 支持思考的模型是否输出思考过程
 const user_agent_disguise = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0" // 伪装ua
+const Reaction = true // 是否开启表情回应
+const Reaction_id = 187 // 表情id
 
 // 多模态相关配置
 let vision_enable = false // 是否开启多模态
@@ -300,6 +302,12 @@ export class bigmodel extends plugin {
         }
 
         logger.mark(`[${plugin_name}]${e.group_id}_${e.user_id} 发送了消息：${msg}`)
+
+        if (e.isGroup && Reaction) { // 是群且开启表情回应时进行回应（私聊不支持标签回应）
+            if (!Bot.pickGroup(e.group_id)?.setReaction(e.seq, Reaction_id, 1)) {
+                logger.warn(`[${plugin_name}]${e.group_id}_${e.user_id} 表情回应失败，该适配器无法执行此操作`)
+            }
+        }
 
         // 多模态相关信息初始化
         let text_list = [] // 历史文本列表
