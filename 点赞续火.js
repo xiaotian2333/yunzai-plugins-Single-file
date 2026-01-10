@@ -89,9 +89,11 @@ export class dzxh extends plugin {
     // 加入冷却
     user_cd[e.user_id] += 1
 
-    if (Bot.pickFriend(this.e.user_id)?.thumbUp(thumbsUpMe_sum)) {
+    try {
+      Bot.pickFriend(this.e.user_id).thumbUp(thumbsUpMe_sum)
       this.e.reply(thumbsUpMe_msg)
-    } else {
+    }
+    catch {
       this.e.reply(thumbsUpMe_fail_msg)
     }
     return true
