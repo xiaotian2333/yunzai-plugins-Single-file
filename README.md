@@ -396,6 +396,14 @@ cd plugins/example && pnpm add axios
 
 > 此处会隐藏一些一般不用调整的高级配置项，如需要调整请自行修改源码内相关配置  
 
+### 投票撤回
+
+消息回应`🔪`表情到达指定人数即可撤回消息  
+
+![示例图](https://static1.keepcdn.com/tweet-entry/68a17db503cd660001bd4663/2026/01/11/1d4afb62-67b7-4caf-b27f-2396e159a1a2/1AED9864CD209DC6A0673B8F166C6A7B.png
+)
+> 机器人需要有群管理员权限
+
 ---
 
 <h2><center>非常规插件</center></h2>
