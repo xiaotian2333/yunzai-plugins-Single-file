@@ -18,6 +18,7 @@ const think_print = false // 支持思考的模型是否输出思考过程
 const user_agent_disguise = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0" // 伪装ua
 const Reaction = true // 是否开启表情回应
 const Reaction_id = 187 // 表情id
+const injection_detection = true // 是否开启防注入检测
 
 // 多模态相关配置
 let vision_enable = false // 是否开启多模态
@@ -40,6 +41,32 @@ let system_prompt
 const list = [
     '过滤词列表-156411gfchc',
     '模糊匹配-15615156htdy1',
+]
+// 防注入匹配规则
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|rules?)/i,
+  /忽略(之前|以上|先前|上面)(的|所有)?(指令|提示|规则|要求|限制)/,
+  /disregard\s+(all\s+)?(previous|above|prior)/i,
+  /forget\s+(all\s+)?(previous|above|your)\s+(instructions?|rules?)/i,
+  /you\s+are\s+now\s+(a|an|the)\s+/i,
+  /现在你(是|扮演|变成)/,
+  /act\s+as\s+(a|an|if)/i,
+  /pretend\s+(to\s+be|you\s+are)/i,
+  /假装(你是|成为)/,
+  /扮演(一个|成)?/,
+  /system\s*prompt/i,
+  /系统提示词/,
+  /输出(你的|系统|原始)(提示|指令|prompt)/,
+  /reveal\s+(your|the|system)\s+(prompt|instructions?)/i,
+  /print\s+(your|the|system)\s+(prompt|instructions?)/i,
+  /what\s+(are|is)\s+your\s+(system\s+)?(prompt|instructions?)/i,
+  /jailbreak/i,
+  /DAN\s+mode/i,
+  /developer\s+mode/i,
+  /\[SYSTEM\]/i,
+  /\[INST\]/i,
+  /<<SYS>>/i,
+  /\{\{.*system.*\}\}/i,
 ]
 
 // 函数：读取并解析JSON文件
@@ -228,6 +255,30 @@ async function batchDeleteRedisKeys(pattern, count = 5000) {
     return total;
 }
 
+/**
+ * @description 清洗用户输入
+ * @param {string} text - 待清洗的用户输入文本
+ * @returns {string} - 清洗后的文本
+ */
+function sanitizeInput(text) {
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/\u200B/g, '')
+    .replace(/\u200C/g, '')
+    .replace(/\u200D/g, '')
+    .replace(/\uFEFF/g, '')
+    .trim()
+}
+
+/**
+ * @description 检测输入是否包含越狱/注入攻击
+ * @param {string} text - 待检测的用户输入文本
+ * @returns {boolean} - 如果包含越狱/注入攻击则返回true，否则返回false
+ */
+function detectInjection(text) {
+  return INJECTION_PATTERNS.some(pattern => pattern.test(text))
+}
+
 export class bigmodel extends plugin {
     constructor() {
         super({
@@ -276,17 +327,21 @@ export class bigmodel extends plugin {
 
         // 先过滤非文本信息
         if (!e.msg) { return false }
-
-        // 删除不需要的部分
-        let msg = e.msg
-        msg = msg.replace(' ', '')
+        let msg = sanitizeInput(e.msg)
 
         // 只有被艾特、私聊、命中机器人名字的消息才会被处理
         if (!(e.isPrivate || e.atme || e.atBot || msg.includes(this.e.bot.nickname))) {
             return false
         }
 
-        // 输入过滤
+        // 拦截越狱/注入攻击
+        if (injection_detection && detectInjection(msg)) {
+            logger.mark(`[${plugin_name}]检测到越狱/注入攻击，已过滤`)
+            e.reply("输入包含越狱/注入攻击，已拦截")
+            return true
+        }
+
+        // 用户敏感词过滤
         if (list.some(item => msg.includes(item))) {
             // 检测到需要过滤的词后的处理逻辑
             logger.mark(`[${plugin_name}]检测到敏感词，已过滤`)
