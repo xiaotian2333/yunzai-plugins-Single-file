@@ -3,7 +3,7 @@
 
 import axios from 'axios'
 
-// 填入你的智谱key或token，如没有可加群获取token
+// 填入你的智谱key或token
 // 收费标准为按调用次数后付费，0.06 元/次
 const API_KEY = ""
 

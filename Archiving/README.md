@@ -31,3 +31,21 @@ r16 - 分级大概为16+
 
 点歌后跟上歌曲名称即可点歌  
 支持vip歌曲
+
+### 手办化
+
+通过智谱大模型将图片转换为手办化的图片
+
+> 需自行配置智谱key或token
+
+使用 `#手办化` `#手办` 等指令即可将图片转换为手办化的图片
+
+使用[AI漫画智能体](https://docs.bigmodel.cn/cn/guide/agents/aicaricature)，收费标准为`按调用次数后付费，0.06 元/次`
+
+#### 安装依赖  
+
+使用前需要安装依赖  
+
+``` bash
+cd plugins/example && pnpm add axios
+```
